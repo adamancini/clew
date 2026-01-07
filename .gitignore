@@ -1,0 +1,34 @@
+# Binaries
+clew
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build directory
+dist/
+bin/
+
+# Test binary
+*.test
+
+# Coverage
+*.out
+coverage.html
+
+# Go workspace
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Debug
+__debug_bin*
