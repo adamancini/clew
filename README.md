@@ -85,6 +85,7 @@ clew export -o yaml > ~/.config/claude/Clewfile
 clew status
 ```
 
+<<<<<<< HEAD
 ### Initialize a Clewfile
 
 ```bash
@@ -155,6 +156,54 @@ Installed: 3
 - `q` - Quit, abort interactive mode
 
 **Non-TTY fallback:** When not running in a terminal (e.g., in scripts or CI), interactive mode automatically falls back to non-interactive mode with a warning.
+
+## Backup and Restore
+
+clew can backup your Claude Code configuration before making changes, allowing easy rollback if something goes wrong.
+
+```bash
+# Create a backup
+clew backup create
+clew backup create --note "Before plugin update"
+
+# List all backups
+clew backup list
+clew backup list -o json
+
+# Restore from a backup
+clew backup restore <id>
+clew backup restore latest
+
+# Delete a specific backup
+clew backup delete <id>
+
+# Remove old backups (keep last N)
+clew backup prune --keep=10
+```
+
+### Auto-Backup on Sync
+
+By default, `clew sync` creates a backup before making changes:
+
+```bash
+# Default behavior - backup created automatically
+clew sync
+
+# Explicitly request backup
+clew sync --backup
+
+# Skip backup creation
+clew sync --no-backup
+```
+
+### Backup Storage
+
+Backups are stored in `~/.cache/clew/backups/` as JSON files named with timestamps (e.g., `2024-01-08-143022.json`).
+
+Each backup contains:
+- Timestamp and optional note
+- clew version that created the backup
+- Complete state: marketplaces, plugins, and MCP servers
 
 ### Flags
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/adamancini/clew/internal/backup"
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/interactive"
@@ -15,26 +16,36 @@ import (
 )
 
 func newSyncCmd() *cobra.Command {
-	var strict bool
-	var interactiveMode bool
+	var (
+		strict          bool
+		interactiveMode bool
+		doBackup        bool
+		noBackup        bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "sync",
 		Short: "Reconcile system to match Clewfile",
-		Long:  `Sync reads the Clewfile and ensures the system matches the declared state.`,
+		Long: `Sync reads the Clewfile and ensures the system matches the declared state.
+
+By default, a backup is created before making changes. Use --no-backup to disable.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSync(strict, interactiveMode)
+			// --backup flag takes precedence, --no-backup disables
+			createBackup := doBackup || !noBackup
+			return runSync(strict, interactiveMode, createBackup)
 		},
 	}
 
 	cmd.Flags().BoolVar(&strict, "strict", false, "Exit non-zero on any failure")
 	cmd.Flags().BoolVarP(&interactiveMode, "interactive", "i", false, "Prompt for confirmation of each change")
+	cmd.Flags().BoolVar(&doBackup, "backup", false, "Create backup before sync (default behavior)")
+	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "Skip creating backup before sync")
 
 	return cmd
 }
 
 // runSync executes the sync workflow.
-func runSync(strict bool, interactiveMode bool) error {
+func runSync(strict bool, interactiveMode bool, createBackup bool) error {
 	// 1. Find Clewfile
 	clewfilePath, err := config.FindClewfile(configPath)
 	if err != nil {
@@ -102,6 +113,21 @@ func runSync(strict bool, interactiveMode bool) error {
 		}
 		// Filter diff to only include approved items
 		diffResult = interactive.FilterDiffBySelection(diffResult, selection)
+	}
+
+	// 6.5. Create backup before making changes
+	if createBackup {
+		manager, err := backup.NewManager(clewVersion)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to initialize backup manager: %v\n", err)
+		} else {
+			bak, err := manager.Create(currentState, "Auto (sync)")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to create backup: %v\n", err)
+			} else if verbose {
+				fmt.Fprintf(os.Stderr, "Backup created: %s\n", bak.ID)
+			}
+		}
 	}
 
 	// 7. Execute sync
