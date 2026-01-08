@@ -11,13 +11,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 make build              # Build binary to ./clew
 make install            # Install to GOPATH/bin
-make test               # Run all tests
+make test               # Run unit tests only
+make test-unit          # Run unit tests only
+make test-e2e           # Run e2e tests only
+make test-all           # Run all tests (unit + e2e)
 make test-coverage      # Run tests with coverage report
+make test-e2e-verbose   # Run e2e tests with verbose output
 make lint               # Run golangci-lint
 make fmt                # Format code
 make tidy               # Tidy go.mod
 make build-all          # Cross-compile for darwin/linux (amd64/arm64)
 make clean              # Remove build artifacts
+make plugin-binaries    # Build binaries for plugin distribution
+make plugin-clean       # Clean plugin binaries
+make plugin             # Build complete plugin package
 ```
 
 Run a single test:
@@ -57,8 +64,10 @@ clew/
 ### State Detection Strategy
 
 Two readers in `internal/state/`:
-- `CLIReader` (default) - Invokes `claude plugin list --json`, `claude mcp list --json`
-- `FilesystemReader` (-f flag) - Reads `~/.claude/plugins/installed_plugins.json` directly
+- `FilesystemReader` (default) - Reads `~/.claude/plugins/` JSON files directly (stable)
+- `CLIReader` (--cli flag) - Invokes `claude plugin marketplace list` and `claude mcp list` (experimental, currently broken - see issue #34)
+
+The filesystem reader is now the default because it's more reliable and doesn't depend on the Claude CLI's human-readable output parsing.
 
 ### Design Decisions
 
@@ -67,16 +76,60 @@ Two readers in `internal/state/`:
 | Sync behavior | Non-destructive | Items not in Clewfile are reported, not removed |
 | Scope inference | From Clewfile location | `~/` or `~/.config/` = user scope; project dir = project scope |
 | OAuth MCP servers | Skipped with info | Cannot be automated; require manual `/mcp` setup |
+| Git status checking | Local repos checked | Skips sync if uncommitted changes in local marketplaces/plugins |
+| Auto-backup | Enabled by default on sync | Creates backup before changes; use --no-backup to skip |
+| Interactive mode | Available for sync/diff | Approve each change individually with -i/--interactive flag |
 | Exit codes | 0=success, 1=failure, 2=strict mode failure | Partial success exits 0 unless --strict |
 
 ## Implementation Status
 
-The scaffolding is complete with TODOs marking unimplemented sections:
-- `config.Load()` - needs YAML/TOML/JSON parsing
-- `state.CLIReader.Read()` - needs claude CLI invocation
-- `state.FilesystemReader.Read()` - needs file parsing
-- `diff.Compute()` - needs comparison logic
-- `sync.addMarketplace/installPlugin/updatePluginState/addMCPServer` - need claude CLI calls
+**✅ Fully Implemented:**
+
+### Core Functionality
+- ✅ Config parsing (YAML/TOML/JSON) with environment variable expansion
+- ✅ FilesystemReader - reads state from `~/.claude/` JSON files (default, stable)
+- ✅ CLIReader - parses `claude plugin marketplace list` and `claude mcp list` output (experimental, issue #34)
+- ✅ Diff computation - compares Clewfile against current state
+- ✅ Sync execution - installs/updates marketplaces, plugins, and MCP servers via claude CLI
+- ✅ Command runner abstraction - allows mocking for tests
+
+### Commands
+- ✅ `clew init` - create Clewfile from templates (minimal, developer, full, or URL)
+- ✅ `clew sync` - reconcile system to match Clewfile (with auto-backup)
+- ✅ `clew diff` - dry-run preview of changes
+- ✅ `clew export` - export current state to Clewfile format
+- ✅ `clew status` - show current configuration status
+- 🚧 `clew add` - add marketplace to Clewfile (plugin/MCP support pending)
+- 🚧 `clew remove` - remove marketplace from Clewfile (plugin/MCP support pending)
+- ✅ `clew completion` - shell completion (bash/zsh/fish)
+- ✅ `clew backup` - backup/restore functionality
+  - `create` - create backup snapshot
+  - `list` - list all backups
+  - `restore` - restore from backup
+  - `delete` - delete specific backup
+  - `prune` - remove old backups
+
+### Features
+- ✅ Interactive mode (`-i/--interactive`) for sync and diff
+- ✅ Git status awareness - skips local repos with uncommitted changes
+- ✅ Auto-backup before sync (configurable with --backup/--no-backup)
+- ✅ Multiple output formats (text, json, yaml)
+- ✅ Environment variable expansion (`${VAR}` and `${VAR:-default}`)
+- ✅ Flexible plugin format (string or object with enabled/scope)
+- ✅ OAuth MCP server detection and skip
+- ✅ Scope support (user/project) for plugins and MCP servers
+- ✅ `--show-commands` flag to display CLI reconciliation commands
+- ✅ Comprehensive e2e test suite
+- ✅ JSON Schema for IDE validation and auto-completion
+
+### Plugin Integration
+- ✅ Claude Code plugin structure (`.claude-plugin/plugin.json`)
+- ✅ SessionStart hook for auto-execution
+- ✅ Skill for user-invokable `/clew` command
+- ✅ Multi-platform binaries (darwin/linux, amd64/arm64)
+
+**⚠️ Known Issues:**
+- CLIReader is experimental and currently broken (issue #34) - use filesystem reader (default)
 
 ## Clewfile Locations (precedence order)
 
