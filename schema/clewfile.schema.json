@@ -81,9 +81,18 @@
             "properties": {
               "name": {
                 "type": "string",
-                "pattern": "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+$",
-                "description": "Plugin identifier in plugin@marketplace format",
-                "examples": ["linear@claude-plugins-official"]
+                "description": "Plugin identifier. Use plugin@marketplace format for marketplace plugins, or any name for local plugins.",
+                "examples": ["linear@claude-plugins-official", "my-local-plugin"]
+              },
+              "source": {
+                "type": "string",
+                "enum": ["local"],
+                "description": "Plugin source type. Omit for marketplace plugins, use 'local' for local git repositories."
+              },
+              "path": {
+                "type": "string",
+                "description": "Local filesystem path to the plugin git repository (required when source: local)",
+                "examples": ["~/.claude/plugins/repos/my-plugin", "/path/to/local/plugin"]
               },
               "enabled": {
                 "type": "boolean",
@@ -96,6 +105,26 @@
                 "description": "Installation scope (default: inferred from Clewfile location)"
               }
             },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "source": { "const": "local" } },
+                  "required": ["source"]
+                },
+                "then": {
+                  "required": ["path"]
+                }
+              },
+              {
+                "if": {
+                  "required": ["path"]
+                },
+                "then": {
+                  "properties": { "source": { "const": "local" } },
+                  "required": ["source"]
+                }
+              }
+            ],
             "additionalProperties": false
           }
         ]
@@ -111,6 +140,12 @@
           {
             "name": "devops-toolkit@devops-toolkit",
             "scope": "user"
+          },
+          {
+            "name": "my-local-plugin",
+            "source": "local",
+            "path": "~/.claude/plugins/repos/my-local-plugin",
+            "enabled": true
           }
         ]
       ]

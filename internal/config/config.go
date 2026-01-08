@@ -27,6 +27,8 @@ type Marketplace struct {
 // Can be specified as a simple string "name@marketplace" or as a struct.
 type Plugin struct {
 	Name    string `yaml:"name" toml:"name" json:"name"`
+	Source  string `yaml:"source,omitempty" toml:"source,omitempty" json:"source,omitempty"` // "local" or empty (marketplace)
+	Path    string `yaml:"path,omitempty" toml:"path,omitempty" json:"path,omitempty"`       // Required for source: local
 	Enabled *bool  `yaml:"enabled,omitempty" toml:"enabled,omitempty" json:"enabled,omitempty"`
 	Scope   string `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
 }

@@ -14,24 +14,28 @@ import (
 )
 
 func newDiffCmd() *cobra.Command {
-	var interactiveMode bool
+	var (
+		interactiveMode bool
+		showCommands    bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "diff",
 		Short: "Show what would change (dry-run)",
 		Long:  `Diff compares the Clewfile against current state and shows what sync would do.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDiff(interactiveMode)
+			return runDiff(interactiveMode, showCommands)
 		},
 	}
 
 	cmd.Flags().BoolVarP(&interactiveMode, "interactive", "i", false, "Preview changes with prompts (dry-run)")
+	cmd.Flags().BoolVar(&showCommands, "show-commands", false, "Output CLI commands to reconcile state")
 
 	return cmd
 }
 
 // runDiff executes the diff workflow (dry-run mode).
-func runDiff(interactiveMode bool) error {
+func runDiff(interactiveMode bool, showCommands bool) error {
 	// 1. Find Clewfile
 	clewfilePath, err := config.FindClewfile(configPath)
 	if err != nil {
@@ -74,6 +78,33 @@ func runDiff(interactiveMode bool) error {
 
 	// 5. Compute diff
 	diffResult := diff.Compute(clewfile, currentState)
+
+	// 5a. Handle --show-commands flag
+	if showCommands {
+		commands := diffResult.GenerateCommands()
+		if len(commands) == 0 {
+			fmt.Println("# No commands needed - already in sync")
+			return nil
+		}
+
+		// Output commands based on format
+		format, err := output.ParseFormat(outputFormat)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		if format == output.FormatText {
+			fmt.Println(diff.FormatCommands(commands, true))
+		} else {
+			writer := output.NewWriter(os.Stdout, format)
+			if err := writer.Write(commands); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+				os.Exit(1)
+			}
+		}
+		return nil
+	}
 
 	// 6. Handle interactive mode (preview with prompts)
 	if interactiveMode {
