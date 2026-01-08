@@ -5,14 +5,26 @@ import (
 	"github.com/adamancini/clew/internal/diff"
 )
 
+// Operation represents a single sync operation performed.
+type Operation struct {
+	Type        string `json:"type"`            // "marketplace", "plugin", or "mcp"
+	Name        string `json:"name"`            // Item name
+	Action      string `json:"action"`          // "add", "enable", "disable"
+	Command     string `json:"command"`         // CLI command executed
+	Description string `json:"description"`     // Human-readable description
+	Success     bool   `json:"success"`         // Whether operation succeeded
+	Error       string `json:"error,omitempty"` // Error message if failed
+}
+
 // Result represents the outcome of a sync operation.
 type Result struct {
 	Installed  int
 	Updated    int
 	Skipped    int
 	Failed     int
-	Attention  []string // Items needing manual attention
-	Errors     []error
+	Attention  []string    // Items needing manual attention
+	Errors     []error     // Detailed error objects (not serialized to JSON)
+	Operations []Operation `json:"operations,omitempty"` // Individual operations performed
 }
 
 // Options configures sync behavior.
@@ -20,6 +32,7 @@ type Options struct {
 	Strict  bool // Exit non-zero on any failure
 	Verbose bool
 	Quiet   bool
+	Short   bool // One-line-per-item output format
 }
 
 // Syncer executes sync operations with a configurable command runner.
@@ -39,13 +52,17 @@ func NewSyncerWithRunner(runner CommandRunner) *Syncer {
 
 // Execute applies the diff to bring current state in line with Clewfile.
 func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
-	result := &Result{}
+	result := &Result{
+		Operations: []Operation{},
+	}
 
 	// Process marketplaces first (plugins depend on them)
 	for _, m := range d.Marketplaces {
 		switch m.Action {
 		case diff.ActionAdd:
-			if err := s.addMarketplace(m); err != nil {
+			op, err := s.addMarketplace(m)
+			result.Operations = append(result.Operations, op)
+			if err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
@@ -65,14 +82,18 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 	for _, p := range d.Plugins {
 		switch p.Action {
 		case diff.ActionAdd:
-			if err := s.installPlugin(p); err != nil {
+			op, err := s.installPlugin(p)
+			result.Operations = append(result.Operations, op)
+			if err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
 				result.Installed++
 			}
 		case diff.ActionEnable, diff.ActionDisable:
-			if err := s.updatePluginState(p); err != nil {
+			op, err := s.updatePluginState(p)
+			result.Operations = append(result.Operations, op)
+			if err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
@@ -95,11 +116,15 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 			if m.RequiresOAuth {
 				result.Attention = append(result.Attention, "mcp (oauth): "+m.Name)
 				result.Skipped++
-			} else if err := s.addMCPServer(m); err != nil {
-				result.Failed++
-				result.Errors = append(result.Errors, err)
 			} else {
-				result.Installed++
+				op, err := s.addMCPServer(m)
+				result.Operations = append(result.Operations, op)
+				if err != nil {
+					result.Failed++
+					result.Errors = append(result.Errors, err)
+				} else {
+					result.Installed++
+				}
 			}
 		case diff.ActionRemove:
 			// Info only - don't remove

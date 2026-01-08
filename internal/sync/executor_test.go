@@ -51,7 +51,7 @@ func TestAddMarketplaceGitHub(t *testing.T) {
 		},
 	}
 
-	err := syncer.addMarketplace(m)
+	op, err := syncer.addMarketplace(m)
 	if err != nil {
 		t.Fatalf("addMarketplace() error = %v", err)
 	}
@@ -63,6 +63,23 @@ func TestAddMarketplaceGitHub(t *testing.T) {
 	expected := "claude plugin marketplace add owner/test-marketplace"
 	if mock.Commands[0] != expected {
 		t.Errorf("Command = %q, want %q", mock.Commands[0], expected)
+	}
+
+	// Verify Operation struct
+	if op.Type != "marketplace" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "marketplace")
+	}
+	if op.Name != "test-marketplace" {
+		t.Errorf("Operation.Name = %q, want %q", op.Name, "test-marketplace")
+	}
+	if op.Action != "add" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "add")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+	if op.Command != expected {
+		t.Errorf("Operation.Command = %q, want %q", op.Command, expected)
 	}
 }
 
@@ -78,7 +95,7 @@ func TestAddMarketplaceLocal(t *testing.T) {
 		},
 	}
 
-	err := syncer.addMarketplace(m)
+	op, err := syncer.addMarketplace(m)
 	if err != nil {
 		t.Fatalf("addMarketplace() error = %v", err)
 	}
@@ -86,6 +103,14 @@ func TestAddMarketplaceLocal(t *testing.T) {
 	expected := "claude plugin marketplace add /path/to/plugins"
 	if mock.Commands[0] != expected {
 		t.Errorf("Command = %q, want %q", mock.Commands[0], expected)
+	}
+
+	// Verify Operation struct
+	if op.Type != "marketplace" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "marketplace")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
 	}
 }
 
@@ -101,7 +126,7 @@ func TestInstallPlugin(t *testing.T) {
 		},
 	}
 
-	err := syncer.installPlugin(p)
+	op, err := syncer.installPlugin(p)
 	if err != nil {
 		t.Fatalf("installPlugin() error = %v", err)
 	}
@@ -109,6 +134,23 @@ func TestInstallPlugin(t *testing.T) {
 	expected := "claude plugin install test-plugin@marketplace --scope user"
 	if mock.Commands[0] != expected {
 		t.Errorf("Command = %q, want %q", mock.Commands[0], expected)
+	}
+
+	// Verify Operation struct
+	if op.Type != "plugin" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "plugin")
+	}
+	if op.Name != "test-plugin@marketplace" {
+		t.Errorf("Operation.Name = %q, want %q", op.Name, "test-plugin@marketplace")
+	}
+	if op.Action != "add" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "add")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+	if op.Command != expected {
+		t.Errorf("Operation.Command = %q, want %q", op.Command, expected)
 	}
 }
 
@@ -124,7 +166,7 @@ func TestUpdatePluginStateEnable(t *testing.T) {
 		},
 	}
 
-	err := syncer.updatePluginState(p)
+	op, err := syncer.updatePluginState(p)
 	if err != nil {
 		t.Fatalf("updatePluginState() error = %v", err)
 	}
@@ -132,6 +174,20 @@ func TestUpdatePluginStateEnable(t *testing.T) {
 	expected := "claude plugin enable test-plugin@marketplace"
 	if mock.Commands[0] != expected {
 		t.Errorf("Command = %q, want %q", mock.Commands[0], expected)
+	}
+
+	// Verify Operation struct
+	if op.Type != "plugin" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "plugin")
+	}
+	if op.Action != "enable" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "enable")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+	if op.Command != expected {
+		t.Errorf("Operation.Command = %q, want %q", op.Command, expected)
 	}
 }
 
@@ -147,7 +203,7 @@ func TestUpdatePluginStateDisable(t *testing.T) {
 		},
 	}
 
-	err := syncer.updatePluginState(p)
+	op, err := syncer.updatePluginState(p)
 	if err != nil {
 		t.Fatalf("updatePluginState() error = %v", err)
 	}
@@ -155,6 +211,20 @@ func TestUpdatePluginStateDisable(t *testing.T) {
 	expected := "claude plugin disable test-plugin@marketplace"
 	if mock.Commands[0] != expected {
 		t.Errorf("Command = %q, want %q", mock.Commands[0], expected)
+	}
+
+	// Verify Operation struct
+	if op.Type != "plugin" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "plugin")
+	}
+	if op.Action != "disable" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "disable")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+	if op.Command != expected {
+		t.Errorf("Operation.Command = %q, want %q", op.Command, expected)
 	}
 }
 
@@ -171,7 +241,7 @@ func TestAddMCPServerStdio(t *testing.T) {
 		},
 	}
 
-	err := syncer.addMCPServer(m)
+	op, err := syncer.addMCPServer(m)
 	if err != nil {
 		t.Fatalf("addMCPServer() error = %v", err)
 	}
@@ -191,6 +261,20 @@ func TestAddMCPServerStdio(t *testing.T) {
 	if !strings.Contains(cmd, "npx") {
 		t.Errorf("Command should contain npx: %s", cmd)
 	}
+
+	// Verify Operation struct
+	if op.Type != "mcp" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "mcp")
+	}
+	if op.Name != "filesystem" {
+		t.Errorf("Operation.Name = %q, want %q", op.Name, "filesystem")
+	}
+	if op.Action != "add" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "add")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
 }
 
 func TestAddMCPServerHTTP(t *testing.T) {
@@ -205,7 +289,7 @@ func TestAddMCPServerHTTP(t *testing.T) {
 		},
 	}
 
-	err := syncer.addMCPServer(m)
+	op, err := syncer.addMCPServer(m)
 	if err != nil {
 		t.Fatalf("addMCPServer() error = %v", err)
 	}
@@ -216,6 +300,17 @@ func TestAddMCPServerHTTP(t *testing.T) {
 	}
 	if !strings.Contains(cmd, "https://mcp.sentry.dev/mcp") {
 		t.Errorf("Command should contain URL: %s", cmd)
+	}
+
+	// Verify Operation struct
+	if op.Type != "mcp" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "mcp")
+	}
+	if op.Name != "sentry" {
+		t.Errorf("Operation.Name = %q, want %q", op.Name, "sentry")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
 	}
 }
 
@@ -233,7 +328,7 @@ func TestAddMCPServerWithEnv(t *testing.T) {
 		},
 	}
 
-	err := syncer.addMCPServer(m)
+	op, err := syncer.addMCPServer(m)
 	if err != nil {
 		t.Fatalf("addMCPServer() error = %v", err)
 	}
@@ -241,6 +336,14 @@ func TestAddMCPServerWithEnv(t *testing.T) {
 	cmd := mock.Commands[0]
 	if !strings.Contains(cmd, "--env AIRTABLE_API_KEY=secret") {
 		t.Errorf("Command should contain env var: %s", cmd)
+	}
+
+	// Verify Operation struct
+	if op.Type != "mcp" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "mcp")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
 	}
 }
 

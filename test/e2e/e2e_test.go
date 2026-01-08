@@ -369,9 +369,65 @@ func TestSyncCommand(t *testing.T) {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
 
-		// Verbose should show Clewfile path
-		if !strings.Contains(stdout, "Using Clewfile:") {
-			t.Errorf("expected verbose output with Clewfile path, got: %s", stdout)
+		// Verbose should show Clewfile path (in stderr)
+		if !strings.Contains(stderr, "Using Clewfile:") {
+			t.Errorf("expected verbose output with Clewfile path, got stdout: %s, stderr: %s", stdout, stderr)
+		}
+	})
+
+	t.Run("sync short mode", func(t *testing.T) {
+		clewfilePath := filepath.Join(testDir, "Clewfile.yaml")
+		fixtureContent, err := os.ReadFile("fixtures/complete-clewfile.yaml")
+		if err != nil {
+			t.Fatalf("failed to read complete-clewfile.yaml: %v", err)
+		}
+		if err := os.WriteFile(clewfilePath, fixtureContent, 0644); err != nil {
+			t.Fatalf("failed to write Clewfile: %v", err)
+		}
+
+		stdout, stderr, err := runClew(t, "sync", "--config", clewfilePath, "--filesystem", "--short")
+		if err != nil {
+			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
+		}
+
+		// When in sync, should show "Already in sync" message
+		if !strings.Contains(stdout, "Already in sync") || !strings.Contains(stdout, "Nothing to do") {
+			t.Errorf("expected 'Already in sync' message with --short flag, got: %s", stdout)
+		}
+	})
+
+	t.Run("sync JSON output includes operations array", func(t *testing.T) {
+		// Use minimal Clewfile to trigger operations (items not in Clewfile)
+		minimalPath := filepath.Join(testDir, "minimal.yaml")
+		fixtureContent, err := os.ReadFile("fixtures/minimal-clewfile.yaml")
+		if err != nil {
+			t.Fatalf("failed to read minimal-clewfile.yaml: %v", err)
+		}
+		if err := os.WriteFile(minimalPath, fixtureContent, 0644); err != nil {
+			t.Fatalf("failed to write minimal Clewfile: %v", err)
+		}
+
+		stdout, stderr, err := runClew(t, "sync", "--config", minimalPath, "--filesystem", "--output", "json")
+		if err != nil {
+			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
+		}
+
+		// When already in sync, output should be the "Nothing to do" message, not JSON
+		// But if there were operations, output should be valid JSON with operations field
+		if strings.Contains(stdout, "Already in sync") {
+			// No JSON output when already in sync - this is expected
+			return
+		}
+
+		// If we got JSON output, verify structure
+		var result map[string]interface{}
+		if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+			t.Fatalf("output is not valid JSON: %v\noutput: %s", err, stdout)
+		}
+
+		// Verify operations array exists in sync result
+		if _, ok := result["operations"]; !ok {
+			t.Error("expected 'operations' field in JSON output")
 		}
 	})
 }
