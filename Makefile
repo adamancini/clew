@@ -23,7 +23,7 @@ test:
 
 # Run tests with coverage
 test-coverage:
-	go test -coverprofile=coverage.out ./...
+	go test -coverprofile=coverage.out ./internal/config ./internal/diff ./internal/state ./internal/sync
 	go tool cover -html=coverage.out -o coverage.html
 
 # Lint
