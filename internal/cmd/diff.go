@@ -8,23 +8,30 @@ import (
 
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
+	"github.com/adamancini/clew/internal/interactive"
 	"github.com/adamancini/clew/internal/output"
 	"github.com/adamancini/clew/internal/state"
 )
 
 func newDiffCmd() *cobra.Command {
-	return &cobra.Command{
+	var interactiveMode bool
+
+	cmd := &cobra.Command{
 		Use:   "diff",
 		Short: "Show what would change (dry-run)",
 		Long:  `Diff compares the Clewfile against current state and shows what sync would do.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDiff()
+			return runDiff(interactiveMode)
 		},
 	}
+
+	cmd.Flags().BoolVarP(&interactiveMode, "interactive", "i", false, "Preview changes with prompts (dry-run)")
+
+	return cmd
 }
 
 // runDiff executes the diff workflow (dry-run mode).
-func runDiff() error {
+func runDiff(interactiveMode bool) error {
 	// 1. Find Clewfile
 	clewfilePath, err := config.FindClewfile(configPath)
 	if err != nil {
@@ -66,7 +73,28 @@ func runDiff() error {
 	// 5. Compute diff
 	diffResult := diff.Compute(clewfile, currentState)
 
-	// 6. Format and display output
+	// 6. Handle interactive mode (preview with prompts)
+	if interactiveMode {
+		// Check if we're in a TTY
+		if !interactive.IsTerminal() {
+			fmt.Fprintln(os.Stderr, "Warning: Not running in a terminal. Falling back to non-interactive mode.")
+			interactiveMode = false
+		}
+	}
+
+	if interactiveMode {
+		prompter := interactive.NewPrompter()
+		selection, _ := prompter.PromptForSelection(diffResult)
+		if selection != nil {
+			// Show what would have been selected (dry-run only, no execution)
+			filteredResult := interactive.FilterDiffBySelection(diffResult, selection)
+			fmt.Println("\n--- Dry-run complete. No changes were made. ---")
+			printDiffResultText(filteredResult)
+		}
+		return nil
+	}
+
+	// 7. Format and display output
 	format, err := output.ParseFormat(outputFormat)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

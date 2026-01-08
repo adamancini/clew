@@ -8,6 +8,7 @@ import (
 
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
+	"github.com/adamancini/clew/internal/interactive"
 	"github.com/adamancini/clew/internal/output"
 	"github.com/adamancini/clew/internal/state"
 	"github.com/adamancini/clew/internal/sync"
@@ -15,23 +16,25 @@ import (
 
 func newSyncCmd() *cobra.Command {
 	var strict bool
+	var interactiveMode bool
 
 	cmd := &cobra.Command{
 		Use:   "sync",
 		Short: "Reconcile system to match Clewfile",
 		Long:  `Sync reads the Clewfile and ensures the system matches the declared state.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSync(strict)
+			return runSync(strict, interactiveMode)
 		},
 	}
 
 	cmd.Flags().BoolVar(&strict, "strict", false, "Exit non-zero on any failure")
+	cmd.Flags().BoolVarP(&interactiveMode, "interactive", "i", false, "Prompt for confirmation of each change")
 
 	return cmd
 }
 
 // runSync executes the sync workflow.
-func runSync(strict bool) error {
+func runSync(strict bool, interactiveMode bool) error {
 	// 1. Find Clewfile
 	clewfilePath, err := config.FindClewfile(configPath)
 	if err != nil {
@@ -82,7 +85,26 @@ func runSync(strict bool) error {
 		return nil
 	}
 
-	// 6. Execute sync
+	// 6. Handle interactive mode
+	if interactiveMode {
+		// Check if we're in a TTY
+		if !interactive.IsTerminal() {
+			fmt.Fprintln(os.Stderr, "Warning: Not running in a terminal. Falling back to non-interactive mode.")
+			interactiveMode = false
+		}
+	}
+
+	if interactiveMode {
+		prompter := interactive.NewPrompter()
+		selection, proceed := prompter.PromptForSelection(diffResult)
+		if !proceed {
+			return nil
+		}
+		// Filter diff to only include approved items
+		diffResult = interactive.FilterDiffBySelection(diffResult, selection)
+	}
+
+	// 7. Execute sync
 	syncer := sync.NewSyncer()
 	result, err := syncer.Execute(diffResult, sync.Options{
 		Strict:  strict,
@@ -94,7 +116,7 @@ func runSync(strict bool) error {
 		os.Exit(1)
 	}
 
-	// 7. Format and display output
+	// 8. Format and display output
 	format, err := output.ParseFormat(outputFormat)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
