@@ -1,0 +1,21 @@
+{
+  "name": "clew",
+  "description": "Declarative Claude Code configuration manager - like Brewfile for Homebrew. Sync plugins, marketplaces, and MCP servers across machines using a simple Clewfile.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Adam Ancini",
+    "url": "https://github.com/adamancini"
+  },
+  "homepage": "https://github.com/adamancini/clew",
+  "repository": "https://github.com/adamancini/clew",
+  "license": "MIT",
+  "keywords": [
+    "configuration",
+    "dotfiles",
+    "sync",
+    "plugins",
+    "marketplaces",
+    "mcp",
+    "declarative"
+  ]
+}

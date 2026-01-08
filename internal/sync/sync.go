@@ -22,15 +22,30 @@ type Options struct {
 	Quiet   bool
 }
 
+// Syncer executes sync operations with a configurable command runner.
+type Syncer struct {
+	runner CommandRunner
+}
+
+// NewSyncer creates a Syncer with the default command runner.
+func NewSyncer() *Syncer {
+	return &Syncer{runner: &DefaultCommandRunner{}}
+}
+
+// NewSyncerWithRunner creates a Syncer with a custom command runner (for testing).
+func NewSyncerWithRunner(runner CommandRunner) *Syncer {
+	return &Syncer{runner: runner}
+}
+
 // Execute applies the diff to bring current state in line with Clewfile.
-func Execute(d *diff.Result, opts Options) (*Result, error) {
+func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 	result := &Result{}
 
 	// Process marketplaces first (plugins depend on them)
 	for _, m := range d.Marketplaces {
 		switch m.Action {
 		case diff.ActionAdd:
-			if err := addMarketplace(m); err != nil {
+			if err := s.addMarketplace(m); err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
@@ -46,14 +61,14 @@ func Execute(d *diff.Result, opts Options) (*Result, error) {
 	for _, p := range d.Plugins {
 		switch p.Action {
 		case diff.ActionAdd:
-			if err := installPlugin(p); err != nil {
+			if err := s.installPlugin(p); err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
 				result.Installed++
 			}
 		case diff.ActionEnable, diff.ActionDisable:
-			if err := updatePluginState(p); err != nil {
+			if err := s.updatePluginState(p); err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
@@ -72,7 +87,7 @@ func Execute(d *diff.Result, opts Options) (*Result, error) {
 			if m.RequiresOAuth {
 				result.Attention = append(result.Attention, "mcp (oauth): "+m.Name)
 				result.Skipped++
-			} else if err := addMCPServer(m); err != nil {
+			} else if err := s.addMCPServer(m); err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
 			} else {
@@ -87,22 +102,3 @@ func Execute(d *diff.Result, opts Options) (*Result, error) {
 	return result, nil
 }
 
-func addMarketplace(m diff.MarketplaceDiff) error {
-	// TODO: Execute claude plugin marketplace add
-	return nil
-}
-
-func installPlugin(p diff.PluginDiff) error {
-	// TODO: Execute claude plugin install
-	return nil
-}
-
-func updatePluginState(p diff.PluginDiff) error {
-	// TODO: Execute claude plugin enable/disable
-	return nil
-}
-
-func addMCPServer(m diff.MCPServerDiff) error {
-	// TODO: Execute claude mcp add
-	return nil
-}

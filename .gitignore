@@ -30,5 +30,8 @@ go.work
 # macOS
 .DS_Store
 
+# Local settings (use ~/.claude/settings.json instead)
+.claude/
+
 # Debug
 __debug_bin*

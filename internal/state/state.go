@@ -46,24 +46,7 @@ type Reader interface {
 // CLIReader reads state by invoking claude CLI commands.
 type CLIReader struct{}
 
-// Read implements Reader using claude CLI.
-func (r *CLIReader) Read() (*State, error) {
-	// TODO: Implement CLI-based state reading
-	// claude plugin list --json
-	// claude mcp list --json
-	return nil, nil
-}
-
 // FilesystemReader reads state directly from Claude Code's files.
 type FilesystemReader struct {
 	ClaudeDir string // typically ~/.claude
-}
-
-// Read implements Reader using filesystem access.
-func (r *FilesystemReader) Read() (*State, error) {
-	// TODO: Implement filesystem-based state reading
-	// Read ~/.claude/plugins/installed_plugins.json
-	// Read ~/.claude/plugins/known_marketplaces.json
-	// Read ~/.claude.json for MCP servers
-	return nil, nil
 }

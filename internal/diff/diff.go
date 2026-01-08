@@ -53,8 +53,7 @@ type Result struct {
 
 // Compute calculates the diff between a Clewfile and current state.
 func Compute(clewfile *config.Clewfile, current *state.State) *Result {
-	// TODO: Implement diff computation
-	return &Result{}
+	return compute(clewfile, current)
 }
 
 // Summary returns counts of actions needed.

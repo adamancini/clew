@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Clewfile represents the parsed configuration file.
@@ -58,19 +59,23 @@ func FindClewfile(explicitPath string) (string, error) {
 		}
 	}
 
+	// Get home directory (required for standard locations)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine home directory: %w", err)
+	}
+
 	// Build search paths in order of precedence
 	var searchPaths []string
 
 	// XDG_CONFIG_HOME or default
 	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfig == "" {
-		home, _ := os.UserHomeDir()
 		xdgConfig = filepath.Join(home, ".config")
 	}
 	searchPaths = append(searchPaths, filepath.Join(xdgConfig, "claude"))
 
 	// ~/.claude
-	home, _ := os.UserHomeDir()
 	searchPaths = append(searchPaths, filepath.Join(home, ".claude"))
 
 	// Home directory root
@@ -104,14 +109,37 @@ func FindClewfile(explicitPath string) (string, error) {
 
 // Load reads and parses a Clewfile from the given path.
 func Load(path string) (*Clewfile, error) {
-	// TODO: Implement parsing based on file extension
-	// For now, return a placeholder
-	return nil, fmt.Errorf("Load not yet implemented")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Clewfile: %w", err)
+	}
+
+	format := detectFormat(path, content)
+	if format == FormatUnknown {
+		return nil, fmt.Errorf("unable to detect file format for %s", path)
+	}
+
+	clewfile, err := parse(content, format)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := Validate(clewfile); err != nil {
+		return nil, err
+	}
+
+	return clewfile, nil
 }
 
 // InferScope determines the default scope based on Clewfile location.
+// Returns "user" for home directory locations, "project" otherwise.
 func InferScope(clewfilePath string) string {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		// If we can't determine home directory, default to project scope (safer)
+		return "project"
+	}
+
 	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfig == "" {
 		xdgConfig = filepath.Join(home, ".config")
@@ -121,7 +149,7 @@ func InferScope(clewfilePath string) string {
 
 	// If in home config directories, default to user scope
 	if dir == home || dir == filepath.Join(home, ".claude") ||
-	   filepath.HasPrefix(dir, xdgConfig) {
+		strings.HasPrefix(dir, xdgConfig+string(os.PathSeparator)) || dir == xdgConfig {
 		return "user"
 	}
 

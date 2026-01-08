@@ -1,0 +1,17 @@
+{
+  "description": "SessionStart hook to install clew binary on first plugin load",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session_start.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-.PHONY: build clean test lint install
+.PHONY: build clean test lint install plugin plugin-binaries plugin-clean
 
 # Build variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -35,6 +35,7 @@ clean:
 	rm -f clew
 	rm -f coverage.out coverage.html
 	rm -rf dist/
+	rm -rf bin/
 
 # Build for multiple platforms
 build-all: clean
@@ -50,3 +51,30 @@ fmt:
 # Tidy dependencies
 tidy:
 	go mod tidy
+
+# Plugin targets
+# Build binaries for plugin distribution
+plugin-binaries:
+	@mkdir -p bin
+	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o bin/clew-darwin-arm64 ./cmd/clew
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o bin/clew-darwin-amd64 ./cmd/clew
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o bin/clew-linux-amd64 ./cmd/clew
+	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o bin/clew-linux-arm64 ./cmd/clew
+	@chmod +x bin/*
+	@echo "Plugin binaries built in bin/"
+
+# Clean plugin binaries
+plugin-clean:
+	rm -rf bin/
+
+# Build complete plugin package (binaries + structure)
+plugin: plugin-binaries
+	@echo "Plugin structure ready:"
+	@echo "  .claude-plugin/plugin.json"
+	@echo "  skills/clew/SKILL.md"
+	@echo "  hooks/hooks.json"
+	@echo "  hooks/session_start.sh"
+	@echo "  bin/clew-{darwin,linux}-{arm64,amd64}"
+	@echo ""
+	@echo "To test locally:"
+	@echo "  claude --plugin-dir ."
