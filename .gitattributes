@@ -1,0 +1,5 @@
+# Schema files
+*.schema.json linguist-language=JSON
+schema/examples/*.yaml linguist-language=YAML
+schema/examples/*.json linguist-language=JSON
+schema/examples/*.toml linguist-language=TOML

@@ -63,6 +63,8 @@ First found wins:
 ### Example (YAML)
 
 ```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json
+---
 version: 1
 
 marketplaces:
@@ -126,6 +128,16 @@ mcp_servers:
 - Clewfile in `~/.config/` or `~/` → default `user` scope
 - Clewfile in project directory → default `project` scope
 - Explicit `scope:` in entry overrides inference
+
+### IDE Support
+
+A [JSON Schema](../schema/clewfile.schema.json) is provided for IDE integration:
+- Auto-completion for field names and values
+- Validation of required fields and formats
+- Inline documentation and examples
+- Error detection for typos and invalid values
+
+See [schema/README.md](../schema/README.md) for setup instructions and examples.
 
 ## CLI Interface
 

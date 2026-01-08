@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json",
+  "title": "Clewfile",
+  "description": "Declarative configuration for Claude Code plugins, marketplaces, and MCP servers",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Clewfile format version",
+      "const": 1
+    },
+    "marketplaces": {
+      "type": "object",
+      "description": "Plugin marketplace sources",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["source"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["github", "local"],
+            "description": "Marketplace source type"
+          },
+          "repo": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$",
+            "description": "GitHub repository in owner/repo format (required for source: github)",
+            "examples": ["anthropics/claude-plugins-official", "obra/superpowers-marketplace"]
+          },
+          "path": {
+            "type": "string",
+            "description": "Local filesystem path (required for source: local)",
+            "examples": ["~/.claude/plugins/repos/devops-toolkit", "/path/to/local/marketplace"]
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "source": { "const": "github" }
+            },
+            "required": ["repo"]
+          },
+          {
+            "properties": {
+              "source": { "const": "local" }
+            },
+            "required": ["path"]
+          }
+        ]
+      },
+      "examples": [
+        {
+          "claude-plugins-official": {
+            "source": "github",
+            "repo": "anthropics/claude-plugins-official"
+          },
+          "devops-toolkit": {
+            "source": "local",
+            "path": "~/.claude/plugins/repos/devops-toolkit"
+          }
+        }
+      ]
+    },
+    "plugins": {
+      "type": "array",
+      "description": "Plugins to install and manage",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+$",
+            "description": "Simple form: plugin@marketplace (installed, enabled, scope inferred)",
+            "examples": ["context7@claude-plugins-official", "superpowers@superpowers-marketplace"]
+          },
+          {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+$",
+                "description": "Plugin identifier in plugin@marketplace format",
+                "examples": ["linear@claude-plugins-official"]
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether the plugin should be enabled (default: true)",
+                "default": true
+              },
+              "scope": {
+                "type": "string",
+                "enum": ["user", "project"],
+                "description": "Installation scope (default: inferred from Clewfile location)"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "examples": [
+        ["context7@claude-plugins-official", "superpowers@superpowers-marketplace"],
+        [
+          "context7@claude-plugins-official",
+          {
+            "name": "linear@claude-plugins-official",
+            "enabled": false
+          },
+          {
+            "name": "devops-toolkit@devops-toolkit",
+            "scope": "user"
+          }
+        ]
+      ]
+    },
+    "mcp_servers": {
+      "type": "object",
+      "description": "Model Context Protocol server configurations",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["transport"],
+        "properties": {
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "http"],
+            "description": "MCP transport protocol"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to execute (required for stdio transport)",
+            "examples": ["npx", "node", "/usr/local/bin/mcp-server"]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Command arguments (for stdio transport)",
+            "examples": [["-y", "@anthropic/episodic-memory-mcp"]]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Server URL (required for http transport)",
+            "examples": ["https://mcp.linear.app/mcp"]
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables (supports ${VAR} or ${VAR:-default} syntax)",
+            "examples": [
+              {
+                "EMBEDDING_MODEL": "${EMBEDDING_MODEL:-text-embedding-3-small}",
+                "API_KEY": "${API_KEY}"
+              }
+            ]
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "HTTP headers (for http transport)"
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["user", "project"],
+            "description": "Configuration scope (default: inferred from Clewfile location)"
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "transport": { "const": "stdio" }
+            },
+            "required": ["command"]
+          },
+          {
+            "properties": {
+              "transport": { "const": "http" }
+            },
+            "required": ["url"]
+          }
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "episodic-memory": {
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["-y", "@anthropic/episodic-memory-mcp"],
+            "env": {
+              "EMBEDDING_MODEL": "${EMBEDDING_MODEL:-text-embedding-3-small}"
+            }
+          },
+          "linear": {
+            "transport": "http",
+            "url": "https://mcp.linear.app/mcp"
+          }
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}

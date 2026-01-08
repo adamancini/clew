@@ -19,6 +19,8 @@ Declare your desired configuration in a **Clewfile**, sync that across machines,
 
 ```yaml
 # ~/.config/claude/Clewfile
+# yaml-language-server: $schema=https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json
+---
 version: 1
 
 marketplaces:
@@ -128,6 +130,27 @@ clew searches (first found wins):
 4. `~/.Clewfile[.yaml|.toml|.json]`
 
 Supports YAML, TOML, and JSON formats (auto-detected by extension).
+
+## IDE Support
+
+clew includes a [JSON Schema](schema/clewfile.schema.json) for Clewfile validation and auto-completion:
+
+**YAML files** - Add schema reference at the top:
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json
+---
+version: 1
+```
+
+**JSON files** - Add `$schema` property:
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json",
+  "version": 1
+}
+```
+
+See [schema/README.md](schema/README.md) for IDE setup details and examples.
 
 ## Documentation
 

@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=../clewfile.schema.json
+---
+# Advanced Clewfile with all features
+version: 1
+
+marketplaces:
+  # GitHub marketplace
+  claude-plugins-official:
+    source: github
+    repo: anthropics/claude-plugins-official
+
+  superpowers-marketplace:
+    source: github
+    repo: obra/superpowers-marketplace
+
+  # Local marketplace
+  devops-toolkit:
+    source: local
+    path: ~/.claude/plugins/repos/devops-toolkit
+
+plugins:
+  # Simple form - enabled by default, scope inferred
+  - context7@claude-plugins-official
+  - superpowers@superpowers-marketplace
+  - feature-dev@claude-plugins-official
+
+  # Extended form - explicitly disabled
+  - name: linear@claude-plugins-official
+    enabled: false
+
+  # Extended form - explicit scope
+  - name: devops-toolkit@devops-toolkit
+    enabled: true
+    scope: user
+
+  # Extended form - project scope
+  - name: playwright@claude-plugins-official
+    enabled: false
+    scope: project
+
+mcp_servers:
+  # stdio transport with environment variables
+  episodic-memory:
+    transport: stdio
+    command: npx
+    args: ["-y", "@anthropic/episodic-memory-mcp"]
+    env:
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    scope: user
+
+  # stdio transport with direct binary
+  filesystem:
+    transport: stdio
+    command: /usr/local/bin/mcp-server-filesystem
+    args: ["--root", "/Users/ada/projects"]
+    scope: project
+
+  # http transport (OAuth - will be skipped during sync)
+  linear:
+    transport: http
+    url: https://mcp.linear.app/mcp

@@ -1,0 +1,29 @@
+{
+  "$schema": "../clewfile.schema.json",
+  "version": 1,
+  "marketplaces": {
+    "claude-plugins-official": {
+      "source": "github",
+      "repo": "anthropics/claude-plugins-official"
+    },
+    "superpowers-marketplace": {
+      "source": "github",
+      "repo": "obra/superpowers-marketplace"
+    }
+  },
+  "plugins": [
+    "context7@claude-plugins-official",
+    "superpowers@superpowers-marketplace",
+    "episodic-memory@superpowers-marketplace"
+  ],
+  "mcp_servers": {
+    "episodic-memory": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "@anthropic/episodic-memory-mcp"],
+      "env": {
+        "EMBEDDING_MODEL": "${EMBEDDING_MODEL:-text-embedding-3-small}"
+      }
+    }
+  }
+}
