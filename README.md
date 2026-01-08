@@ -105,12 +105,65 @@ clew init --force                      # Overwrite existing Clewfile
 | `developer` | Development tools with 3 plugins + filesystem MCP server |
 | `full` | Comprehensive setup with all plugin options demonstrated |
 
+### Interactive Mode
+
+Use `--interactive` or `-i` to review and approve each change individually:
+
+```bash
+# Interactive sync - approve each change before applying
+clew sync --interactive
+clew sync -i
+
+# Interactive diff - preview changes with prompts (dry-run)
+clew diff --interactive
+```
+
+Interactive mode prompts for each marketplace, plugin, and MCP server change:
+
+```
+$ clew sync --interactive
+
+Marketplaces:
+  + private-marketplace (will add)
+    -> Add private-marketplace from github:you/plugins? [y/n/a/q] y
+
+Plugins:
+  + pr-review-toolkit@claude-plugins-official (will add)
+    -> Add pr-review-toolkit@claude-plugins-official? [y/n/a/q] y
+
+  - linear@claude-plugins-official (will disable)
+    -> Disable linear@claude-plugins-official? [y/n/a/q] n
+    - Skipped
+
+MCP Servers:
+  + filesystem (will add)
+    -> Add MCP server filesystem? [y/n/a/q] y
+
+Summary:
+  Will apply: 3 changes
+  Skipped: 1
+
+Proceed with sync? [y/n] y
+
+Installed: 3
+```
+
+**Prompt options:**
+- `y` - Yes, approve this change
+- `n` - No, skip this change
+- `a` - All, approve all remaining changes
+- `q` - Quit, abort interactive mode
+
+**Non-TTY fallback:** When not running in a terminal (e.g., in scripts or CI), interactive mode automatically falls back to non-interactive mode with a warning.
+
 ### Flags
 
 ```bash
 -o, --output <format>       # Output: text (default), json, yaml
 -f, --filesystem            # Read state from files instead of claude CLI
+-i, --interactive           # Interactive mode (sync/diff only)
 --config <path>             # Explicit Clewfile path
+--strict                    # Exit non-zero on any failure (sync only)
 --verbose                   # Detailed output
 --quiet                     # Errors only
 ```
