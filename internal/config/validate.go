@@ -1,4 +1,19 @@
 // Package config handles Clewfile parsing and location resolution.
+//
+// SYNC REQUIREMENT: Validation rules in this file must stay in sync with
+// the JSON Schema at schema/clewfile.schema.json.
+//
+// When updating validation rules:
+//  1. Update this file (validate.go) with the new validation logic
+//  2. Update schema/clewfile.schema.json with matching constraints
+//  3. Update schema/examples/advanced.yaml if adding new features
+//  4. See CLAUDE.md "Schema Maintenance" section for full checklist
+//
+// Synced validation rules:
+//   - Marketplace sources: github, local (validateMarketplace)
+//   - Plugin scopes: user, project (validatePlugin)
+//   - MCP transports: stdio, http, sse (validateMCPServer)
+//   - MCP scopes: user, project (validateMCPServer)
 package config
 
 import (

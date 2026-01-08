@@ -84,3 +84,42 @@ The scaffolding is complete with TODOs marking unimplemented sections:
 2. `$XDG_CONFIG_HOME/claude/Clewfile[.yaml|.toml|.json]`
 3. `~/.claude/Clewfile[.yaml|.toml|.json]`
 4. `~/.Clewfile[.yaml|.toml|.json]`
+
+## Schema Maintenance
+
+Validation rules exist in two places that must stay synchronized:
+
+| File | Purpose |
+|------|---------|
+| `internal/config/validate.go` | Runtime validation (Go code) |
+| `schema/clewfile.schema.json` | IDE validation (JSON Schema) |
+
+### When to Update Both Files
+
+Update both files when changing:
+- Allowed enum values (transport types, source types, scopes)
+- Required fields for any configuration type
+- Field patterns or formats
+- New configuration options
+
+### Update Checklist
+
+When modifying validation rules:
+
+- [ ] Update `internal/config/validate.go` with new validation logic
+- [ ] Update `schema/clewfile.schema.json` with matching constraints:
+  - Update `enum` arrays for new allowed values
+  - Update `oneOf` blocks for conditional requirements
+  - Update `description` fields to document changes
+- [ ] Update `schema/examples/advanced.yaml` with examples of new features
+- [ ] Run `make test` to verify Go validation
+- [ ] Validate schema is valid JSON: `python3 -m json.tool schema/clewfile.schema.json > /dev/null`
+
+### Current Synced Rules
+
+| Rule | Go Location | Schema Location |
+|------|-------------|-----------------|
+| Marketplace sources | `validateMarketplace()` | `marketplaces.*.source.enum` |
+| Plugin scopes | `validatePlugin()` | `plugins.*.scope.enum` |
+| MCP transports | `validateMCPServer()` | `mcp_servers.*.transport.enum` |
+| MCP scopes | `validateMCPServer()` | `mcp_servers.*.scope.enum` |

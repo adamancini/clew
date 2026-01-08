@@ -60,3 +60,9 @@ mcp_servers:
   linear:
     transport: http
     url: https://mcp.linear.app/mcp
+
+  # sse transport (legacy - prefer http for new configurations)
+  legacy-events-server:
+    transport: sse
+    url: https://example.com/mcp/events
+    scope: user

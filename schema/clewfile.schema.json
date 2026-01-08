@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json",
+  "$comment": "SYNC REQUIREMENT: This schema must stay in sync with internal/config/validate.go. When updating validation rules (enums, required fields, patterns), update both files. See CLAUDE.md 'Schema Maintenance' section.",
   "title": "Clewfile",
   "description": "Declarative configuration for Claude Code plugins, marketplaces, and MCP servers",
   "type": "object",
@@ -123,8 +124,8 @@
         "properties": {
           "transport": {
             "type": "string",
-            "enum": ["stdio", "http"],
-            "description": "MCP transport protocol"
+            "enum": ["stdio", "http", "sse"],
+            "description": "MCP transport protocol. Note: 'sse' (Server-Sent Events) is a legacy transport; prefer 'http' for new configurations"
           },
           "command": {
             "type": "string",
@@ -183,6 +184,13 @@
               "transport": { "const": "http" }
             },
             "required": ["url"]
+          },
+          {
+            "properties": {
+              "transport": { "const": "sse" }
+            },
+            "required": ["url"],
+            "$comment": "SSE (Server-Sent Events) is a legacy transport; prefer http for new configurations"
           }
         ],
         "additionalProperties": false
@@ -200,6 +208,11 @@
           "linear": {
             "transport": "http",
             "url": "https://mcp.linear.app/mcp"
+          },
+          "legacy-sse-server": {
+            "transport": "sse",
+            "url": "https://example.com/mcp/sse",
+            "$comment": "SSE is legacy; use http transport for new servers"
           }
         }
       ]
