@@ -39,6 +39,12 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	rootCmd.AddCommand(newStatusCmd())
 	rootCmd.AddCommand(newAddCmd())
 	rootCmd.AddCommand(newRemoveCmd())
+	rootCmd.AddCommand(newCompletionCmd())
+
+	// Register completion function for output flag
+	_ = rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return []string{"text", "json", "yaml"}, cobra.ShellCompDirectiveNoFileComp
+	})
 
 	return rootCmd.Execute()
 }

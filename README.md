@@ -78,6 +78,47 @@ clew status
 --quiet                     # Errors only
 ```
 
+## Shell Completion
+
+clew supports shell completion for bash, zsh, and fish.
+
+### Installation
+
+**Bash:**
+
+```bash
+# Linux (system-wide)
+clew completion bash | sudo tee /etc/bash_completion.d/clew > /dev/null
+
+# macOS (Homebrew)
+clew completion bash > $(brew --prefix)/etc/bash_completion.d/clew
+
+# Load in current session
+source <(clew completion bash)
+```
+
+**Zsh:**
+
+```bash
+# Oh My Zsh
+mkdir -p ~/.oh-my-zsh/completions
+clew completion zsh > ~/.oh-my-zsh/completions/_clew
+
+# Standard zsh (add to fpath)
+clew completion zsh > /usr/local/share/zsh/site-functions/_clew
+
+# Load in current session
+source <(clew completion zsh)
+```
+
+**Fish:**
+
+```bash
+clew completion fish > ~/.config/fish/completions/clew.fish
+```
+
+After installation, restart your shell or source the completion script.
+
 ## Clewfile Location
 
 clew searches (first found wins):
