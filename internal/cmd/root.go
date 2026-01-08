@@ -33,6 +33,7 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (errors only)")
 
 	// Add subcommands
+	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newSyncCmd())
 	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newExportCmd())
