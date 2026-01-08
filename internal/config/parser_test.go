@@ -32,10 +32,10 @@ func TestDetectFormat(t *testing.T) {
 }
 
 func TestExpandEnvVars(t *testing.T) {
-	os.Setenv("TEST_VAR", "test_value")
-	os.Setenv("EMPTY_VAR", "")
-	defer os.Unsetenv("TEST_VAR")
-	defer os.Unsetenv("EMPTY_VAR")
+	_ = os.Setenv("TEST_VAR", "test_value")
+	_ = os.Setenv("EMPTY_VAR", "")
+	defer func() { _ = os.Unsetenv("TEST_VAR") }()
+	defer func() { _ = os.Unsetenv("EMPTY_VAR") }()
 
 	tests := []struct {
 		name     string
@@ -205,8 +205,8 @@ func TestParseJSON(t *testing.T) {
 }
 
 func TestParseEnvVarExpansion(t *testing.T) {
-	os.Setenv("MCP_COMMAND", "/usr/local/bin/mcp-server")
-	defer os.Unsetenv("MCP_COMMAND")
+	_ = os.Setenv("MCP_COMMAND", "/usr/local/bin/mcp-server")
+	defer func() { _ = os.Unsetenv("MCP_COMMAND") }()
 
 	content := []byte(`
 version: 1

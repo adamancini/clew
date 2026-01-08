@@ -1,0 +1,12 @@
+version: 1
+
+marketplaces:
+  claude-plugins-official:
+    source: github
+    repo: anthropics/claude-plugins
+
+plugins:
+  - context7@claude-plugins-official
+  - episodic-memory@claude-plugins-official
+
+mcp_servers: {}

@@ -1,0 +1,26 @@
+version: 1
+
+marketplaces:
+  claude-plugins-official:
+    source: github
+    repo: anthropics/claude-plugins
+
+plugins:
+  # Core plugins
+  - context7@claude-plugins-official
+  - episodic-memory@claude-plugins-official
+
+  # Code quality
+  - name: pr-review-toolkit@claude-plugins-official
+    enabled: true
+    scope: user
+
+mcp_servers:
+  filesystem:
+    transport: stdio
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+    env:
+      ALLOWED_DIRECTORIES: "${HOME}/projects"

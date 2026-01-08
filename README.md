@@ -54,9 +54,24 @@ curl -L https://github.com/adamancini/clew/releases/latest/download/clew-$(uname
   -o ~/.local/bin/clew && chmod +x ~/.local/bin/clew
 ```
 
+## Quick Start
+
+```bash
+# Create a new Clewfile from a template
+clew init
+
+# Or choose a specific template
+clew init --template=minimal      # Basic starter (2 plugins)
+clew init --template=developer    # Development tools (3 plugins + MCP)
+clew init --template=full         # Comprehensive setup
+```
+
 ## Usage
 
 ```bash
+# Create a Clewfile from a template
+clew init
+
 # Sync system to match Clewfile
 clew sync
 
@@ -69,6 +84,26 @@ clew export -o yaml > ~/.config/claude/Clewfile
 # Check status
 clew status
 ```
+
+### Initialize a Clewfile
+
+```bash
+clew init                              # Interactive template selection
+clew init --template=minimal           # Direct template selection
+clew init --template=developer         # Development tools template
+clew init --template=full              # Full setup template
+clew init --template=https://...       # Custom template from URL
+clew init --config ~/path/Clewfile     # Custom output location
+clew init --force                      # Overwrite existing Clewfile
+```
+
+**Available templates:**
+
+| Template | Description |
+|----------|-------------|
+| `minimal` | Basic starter with 2 core plugins |
+| `developer` | Development tools with 3 plugins + filesystem MCP server |
+| `full` | Comprehensive setup with all plugin options demonstrated |
 
 ### Flags
 
