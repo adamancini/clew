@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -21,6 +22,7 @@ func newSyncCmd() *cobra.Command {
 		interactiveMode bool
 		doBackup        bool
 		noBackup        bool
+		short           bool
 	)
 
 	cmd := &cobra.Command{
@@ -28,11 +30,13 @@ func newSyncCmd() *cobra.Command {
 		Short: "Reconcile system to match Clewfile",
 		Long: `Sync reads the Clewfile and ensures the system matches the declared state.
 
-By default, a backup is created before making changes. Use --no-backup to disable.`,
+By default, shows executed commands with descriptions and results.
+Use --short for one-line-per-item output format.
+Use --backup to create a backup before making changes (default behavior).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// --backup flag takes precedence, --no-backup disables
 			createBackup := doBackup || !noBackup
-			return runSync(strict, interactiveMode, createBackup)
+			return runSync(strict, interactiveMode, createBackup, short)
 		},
 	}
 
@@ -40,12 +44,13 @@ By default, a backup is created before making changes. Use --no-backup to disabl
 	cmd.Flags().BoolVarP(&interactiveMode, "interactive", "i", false, "Prompt for confirmation of each change")
 	cmd.Flags().BoolVar(&doBackup, "backup", false, "Create backup before sync (default behavior)")
 	cmd.Flags().BoolVar(&noBackup, "no-backup", false, "Skip creating backup before sync")
+	cmd.Flags().BoolVar(&short, "short", false, "One-line per item output format")
 
 	return cmd
 }
 
 // runSync executes the sync workflow.
-func runSync(strict bool, interactiveMode bool, createBackup bool) error {
+func runSync(strict bool, interactiveMode bool, createBackup bool, short bool) error {
 	// 1. Find Clewfile
 	clewfilePath, err := config.FindClewfile(configPath)
 	if err != nil {
@@ -138,6 +143,7 @@ func runSync(strict bool, interactiveMode bool, createBackup bool) error {
 		Strict:  strict,
 		Verbose: verbose,
 		Quiet:   quiet,
+		Short:   short,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error during sync: %v\n", err)
@@ -152,7 +158,11 @@ func runSync(strict bool, interactiveMode bool, createBackup bool) error {
 	}
 
 	if format == output.FormatText {
-		printSyncResultText(result)
+		printSyncResultText(result, sync.Options{
+			Short:   short,
+			Quiet:   quiet,
+			Verbose: verbose,
+		})
 	} else {
 		writer := output.NewWriter(os.Stdout, format)
 		if err := writer.Write(result); err != nil {
@@ -173,19 +183,59 @@ func runSync(strict bool, interactiveMode bool, createBackup bool) error {
 }
 
 // printSyncResultText outputs the sync result in human-readable format.
-func printSyncResultText(result *sync.Result) {
-	if result.Installed > 0 {
-		fmt.Printf("Installed: %d\n", result.Installed)
+func printSyncResultText(result *sync.Result, opts sync.Options) {
+	if opts.Short {
+		printSyncResultShort(result)
+	} else {
+		printSyncResultVerbose(result)
 	}
-	if result.Updated > 0 {
-		fmt.Printf("Updated: %d\n", result.Updated)
+}
+
+// printSyncResultVerbose outputs detailed sync results with commands and descriptions.
+func printSyncResultVerbose(result *sync.Result) {
+	// Print each operation with full details
+	for i, op := range result.Operations {
+		// Print action + description
+		fmt.Printf("%s: %s\n", capitalizeAction(op.Action), op.Description)
+
+		// Print the command executed
+		if op.Command != "" {
+			fmt.Printf("\u2192 %s\n", op.Command)
+		}
+
+		// Print success or failure
+		if op.Success {
+			fmt.Println("\u2713 Success")
+		} else {
+			if op.Error != "" {
+				fmt.Printf("\u2717 Failed: %s\n", op.Error)
+			} else {
+				fmt.Println("\u2717 Failed")
+			}
+		}
+
+		// Add blank line between operations (but not after the last one)
+		if i < len(result.Operations)-1 {
+			fmt.Println()
+		}
 	}
+
+	// Add separator before summary if there were operations
+	if len(result.Operations) > 0 {
+		fmt.Println()
+	}
+
+	// Print summary
+	fmt.Println("Summary:")
+	fmt.Printf("  Installed: %d\n", result.Installed)
+	fmt.Printf("  Updated: %d\n", result.Updated)
+	fmt.Printf("  Failed: %d\n", result.Failed)
+
 	if result.Skipped > 0 {
-		fmt.Printf("Skipped: %d\n", result.Skipped)
+		fmt.Printf("  Skipped: %d\n", result.Skipped)
 	}
-	if result.Failed > 0 {
-		fmt.Printf("Failed: %d\n", result.Failed)
-	}
+
+	// TODO: Format git warnings from result.GitWarnings when issue #39 is implemented
 
 	if len(result.Attention) > 0 {
 		fmt.Println("\nItems needing attention:")
@@ -200,4 +250,52 @@ func printSyncResultText(result *sync.Result) {
 			fmt.Printf("  - %v\n", err)
 		}
 	}
+}
+
+// printSyncResultShort outputs a one-line-per-item summary of sync results.
+func printSyncResultShort(result *sync.Result) {
+	// Print each operation on one line
+	for _, op := range result.Operations {
+		if op.Success {
+			fmt.Printf("\u2713 %s (%s %s)\n", op.Name, op.Type, op.Action)
+		} else {
+			fmt.Printf("\u2717 %s (%s %s)\n", op.Name, op.Type, op.Action)
+			if op.Error != "" {
+				fmt.Printf("  Error: %s\n", op.Error)
+			}
+		}
+	}
+
+	// Add blank line before summary if there were operations
+	if len(result.Operations) > 0 {
+		fmt.Println()
+	}
+
+	// Print summary
+	parts := []string{}
+	if result.Installed > 0 || result.Updated > 0 || result.Failed == 0 {
+		parts = append(parts, fmt.Sprintf("%d installed", result.Installed))
+		parts = append(parts, fmt.Sprintf("%d updated", result.Updated))
+	}
+	if result.Failed > 0 {
+		parts = append(parts, fmt.Sprintf("%d failed", result.Failed))
+	}
+	fmt.Printf("Summary: %s\n", strings.Join(parts, ", "))
+
+	// TODO: Format git warnings from result.GitWarnings when issue #39 is implemented
+
+	if len(result.Attention) > 0 {
+		fmt.Println("\nItems needing attention:")
+		for _, item := range result.Attention {
+			fmt.Printf("  - %s\n", item)
+		}
+	}
+}
+
+// capitalizeAction capitalizes the first letter of an action string.
+func capitalizeAction(action string) string {
+	if len(action) == 0 {
+		return action
+	}
+	return strings.ToUpper(action[:1]) + action[1:]
 }

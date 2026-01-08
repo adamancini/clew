@@ -85,7 +85,6 @@ clew export -o yaml > ~/.config/claude/Clewfile
 clew status
 ```
 
-<<<<<<< HEAD
 ### Initialize a Clewfile
 
 ```bash
@@ -157,6 +156,40 @@ Installed: 3
 
 **Non-TTY fallback:** When not running in a terminal (e.g., in scripts or CI), interactive mode automatically falls back to non-interactive mode with a warning.
 
+### Output Modes
+
+By default, sync shows verbose output with commands and descriptions:
+
+```
+$ clew sync
+
+Add: Installing plugin context7
+→ claude plugin install context7@claude-plugins-official
+✓ Success
+
+Enable: Enabling plugin linear
+→ claude plugin enable linear@claude-plugins-official
+✓ Success
+
+Summary:
+  Installed: 1
+  Updated: 1
+  Failed: 0
+```
+
+Use `--short` for concise one-line-per-item output:
+
+```
+$ clew sync --short
+
+✓ context7 (plugin add)
+✓ linear (plugin enable)
+
+Summary: 1 installed, 1 updated
+```
+
+The short format is ideal for scripts and CI pipelines where you want minimal output.
+
 ## Backup and Restore
 
 clew can backup your Claude Code configuration before making changes, allowing easy rollback if something goes wrong.
@@ -213,6 +246,7 @@ Each backup contains:
 -i, --interactive           # Interactive mode (sync/diff only)
 --config <path>             # Explicit Clewfile path
 --strict                    # Exit non-zero on any failure (sync only)
+--short                     # One-line per item output (sync only)
 --verbose                   # Detailed output
 --quiet                     # Errors only
 ```
