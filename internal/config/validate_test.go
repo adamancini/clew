@@ -79,6 +79,16 @@ func TestValidatePlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid local plugin",
+			plugin:  Plugin{Name: "my-plugin", Source: "local", Path: "/path/to/plugin"},
+			wantErr: false,
+		},
+		{
+			name:    "valid local plugin with scope",
+			plugin:  Plugin{Name: "my-plugin", Source: "local", Path: "~/.claude/plugins/repos/my-plugin", Scope: "user"},
+			wantErr: false,
+		},
+		{
 			name:        "missing name",
 			plugin:      Plugin{},
 			wantErr:     true,
@@ -89,6 +99,24 @@ func TestValidatePlugin(t *testing.T) {
 			plugin:      Plugin{Name: "test", Scope: "invalid"},
 			wantErr:     true,
 			errContains: "invalid scope",
+		},
+		{
+			name:        "invalid source",
+			plugin:      Plugin{Name: "test", Source: "github"},
+			wantErr:     true,
+			errContains: "invalid source",
+		},
+		{
+			name:        "local missing path",
+			plugin:      Plugin{Name: "test", Source: "local"},
+			wantErr:     true,
+			errContains: "path is required",
+		},
+		{
+			name:        "path without source",
+			plugin:      Plugin{Name: "test", Path: "/some/path"},
+			wantErr:     true,
+			errContains: "source must be 'local'",
 		},
 	}
 

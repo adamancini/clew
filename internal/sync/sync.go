@@ -54,6 +54,10 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 		case diff.ActionRemove:
 			// Info only - don't remove
 			result.Attention = append(result.Attention, "marketplace: "+m.Name)
+		case diff.ActionSkipGit:
+			// Skipped due to git status issues
+			result.Skipped++
+			result.Attention = append(result.Attention, "marketplace (git): "+m.Name+" - has uncommitted changes")
 		}
 	}
 
@@ -77,6 +81,10 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 		case diff.ActionRemove:
 			// Info only - don't remove
 			result.Attention = append(result.Attention, "plugin: "+p.Name)
+		case diff.ActionSkipGit:
+			// Skipped due to git status issues
+			result.Skipped++
+			result.Attention = append(result.Attention, "plugin (git): "+p.Name+" - has uncommitted changes")
 		}
 	}
 

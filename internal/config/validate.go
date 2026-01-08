@@ -11,6 +11,7 @@
 //
 // Synced validation rules:
 //   - Marketplace sources: github, local (validateMarketplace)
+//   - Plugin sources: local or empty (validatePlugin)
 //   - Plugin scopes: user, project (validatePlugin)
 //   - MCP transports: stdio, http, sse (validateMCPServer)
 //   - MCP scopes: user, project (validateMCPServer)
@@ -101,6 +102,30 @@ func validatePlugin(index int, p Plugin) error {
 		return ValidationError{
 			Field:   fmt.Sprintf("plugins[%d].name", index),
 			Message: "name is required",
+		}
+	}
+
+	// Validate source (if specified)
+	if p.Source != "" && p.Source != "local" {
+		return ValidationError{
+			Field:   fmt.Sprintf("plugins[%d].source", index),
+			Message: fmt.Sprintf("invalid source '%s' (must be 'local' or empty)", p.Source),
+		}
+	}
+
+	// If source is local, path is required
+	if p.Source == "local" && p.Path == "" {
+		return ValidationError{
+			Field:   fmt.Sprintf("plugins[%d].path", index),
+			Message: "path is required for local source",
+		}
+	}
+
+	// If path is specified without source, that's an error
+	if p.Path != "" && p.Source != "local" {
+		return ValidationError{
+			Field:   fmt.Sprintf("plugins[%d].source", index),
+			Message: "source must be 'local' when path is specified",
 		}
 	}
 
