@@ -1,5 +1,5 @@
 # Binaries
-clew
+/clew
 *.exe
 *.exe~
 *.dll
