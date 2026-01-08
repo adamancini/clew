@@ -32,6 +32,9 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (errors only)")
 
+	// Set version for backup metadata
+	SetVersion(version)
+
 	// Add subcommands
 	rootCmd.AddCommand(newSyncCmd())
 	rootCmd.AddCommand(newDiffCmd())
@@ -40,6 +43,7 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	rootCmd.AddCommand(newAddCmd())
 	rootCmd.AddCommand(newRemoveCmd())
 	rootCmd.AddCommand(newCompletionCmd())
+	rootCmd.AddCommand(newBackupCmd())
 
 	// Register completion function for output flag
 	_ = rootCmd.RegisterFlagCompletionFunc("output", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
