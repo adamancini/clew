@@ -1,5 +1,9 @@
 # clew
 
+[![CI](https://github.com/adamancini/clew/actions/workflows/ci.yml/badge.svg)](https://github.com/adamancini/clew/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/adamancini/clew/actions/workflows/codeql.yml/badge.svg)](https://github.com/adamancini/clew/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/adamancini/clew/branch/main/graph/badge.svg)](https://codecov.io/gh/adamancini/clew)
+
 Declarative Claude Code configuration management - like Brewfile for Homebrew, but for Claude Code plugins, marketplaces, and MCP servers.
 
 ## The Problem

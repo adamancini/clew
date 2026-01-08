@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Build binaries
+        run: make plugin-binaries
+
+      - name: Generate checksums
+        run: |
+          cd bin
+          sha256sum clew-* > checksums.txt
+          cat checksums.txt
+
+      - name: Prepare release notes
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          {
+            echo "## Changelog"
+            echo ""
+            git log --oneline -20 "$TAG_NAME"
+            echo ""
+            echo "## Installation"
+            echo ""
+            echo "Download the binary for your platform:"
+            echo ""
+            echo "### macOS"
+            echo "- clew-darwin-arm64 - Apple Silicon (M1/M2/M3)"
+            echo "- clew-darwin-amd64 - Intel Mac"
+            echo ""
+            echo "### Linux"
+            echo "- clew-linux-amd64 - 64-bit"
+            echo "- clew-linux-arm64 - ARM64"
+            echo ""
+            echo "## Checksums"
+            echo ""
+            echo '```'
+            cat bin/checksums.txt
+            echo '```'
+          } > release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            bin/clew-*
+            bin/checksums.txt
+          body_path: release_notes.md
+          generate_release_notes: false
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.ref_name }}
+          path: |
+            bin/clew-*
+            bin/checksums.txt
+          retention-days: 30
