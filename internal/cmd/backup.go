@@ -135,10 +135,12 @@ By default, keeps the 30 most recent backups.`,
 func runBackupCreate(note string) error {
 	// Read current state
 	var reader state.Reader
-	if useFilesystem {
-		reader = &state.FilesystemReader{}
-	} else {
+	if useCLI {
+		// CLI reader is experimental and currently broken (issue #34)
 		reader = &state.CLIReader{}
+	} else {
+		// Filesystem reader is the default
+		reader = &state.FilesystemReader{}
 	}
 
 	currentState, err := reader.Read()
@@ -249,10 +251,12 @@ func runBackupRestore(id string, skipConfirm bool) error {
 
 	// Read current state
 	var reader state.Reader
-	if useFilesystem {
-		reader = &state.FilesystemReader{}
-	} else {
+	if useCLI {
+		// CLI reader is experimental and currently broken (issue #34)
 		reader = &state.CLIReader{}
+	} else {
+		// Filesystem reader is the default
+		reader = &state.FilesystemReader{}
 	}
 
 	currentState, err := reader.Read()

@@ -6,11 +6,12 @@ import (
 
 var (
 	// Global flags
-	outputFormat string
-	configPath   string
+	outputFormat  string
+	configPath    string
 	useFilesystem bool
-	verbose      bool
-	quiet        bool
+	useCLI        bool
+	verbose       bool
+	quiet         bool
 )
 
 func Execute(version, commit, date string) error {
@@ -27,8 +28,9 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "Output format: text, json, yaml")
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "Path to Clewfile")
-	rootCmd.PersistentFlags().BoolVarP(&useFilesystem, "filesystem", "f", false, "Read state from filesystem instead of claude CLI")
-	rootCmd.PersistentFlags().BoolVar(&useFilesystem, "read-from-filesystem", false, "Read state from filesystem instead of claude CLI")
+	rootCmd.PersistentFlags().BoolVar(&useCLI, "cli", false, "Use claude CLI instead of filesystem (experimental, currently broken - see issue #34)")
+	rootCmd.PersistentFlags().BoolVarP(&useFilesystem, "filesystem", "f", false, "[DEPRECATED] Read state from filesystem (now default behavior)")
+	rootCmd.PersistentFlags().BoolVar(&useFilesystem, "read-from-filesystem", false, "[DEPRECATED] Read state from filesystem (now default behavior)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (errors only)")
 

@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "plugins": {
+    "superpowers@superpowers-marketplace": [
+      {
+        "scope": "user",
+        "installPath": "/tmp/clew-test/.claude/plugins/cache/superpowers-marketplace/superpowers/3.4.1",
+        "version": "3.4.1",
+        "installedAt": "2025-11-21T05:23:47.287Z",
+        "lastUpdated": "2025-12-31T08:56:35.398Z",
+        "gitCommitSha": "d90334e0308b6e508acc10c0a282fa237c1f4f6a"
+      }
+    ],
+    "hookify@claude-code-plugins": [
+      {
+        "scope": "project",
+        "projectPath": "/tmp/clew-test/project",
+        "installPath": "/tmp/clew-test/.claude/plugins/cache/claude-code-plugins/hookify/0.1.0",
+        "version": "0.1.0",
+        "installedAt": "2025-11-21T05:23:42.218Z",
+        "lastUpdated": "2025-12-31T08:56:35.398Z",
+        "gitCommitSha": "13a258a3feca92a360e9cec5150dc61666429927"
+      }
+    ],
+    "plugin-dev@claude-code-plugins": [
+      {
+        "scope": "user",
+        "installPath": "/tmp/clew-test/.claude/plugins/cache/claude-code-plugins/plugin-dev/0.1.0",
+        "version": "0.1.0",
+        "installedAt": "2025-11-21T05:23:42.218Z",
+        "lastUpdated": "2025-12-31T08:56:35.398Z",
+        "gitCommitSha": "13a258a3feca92a360e9cec5150dc61666429927"
+      }
+    ]
+  }
+}

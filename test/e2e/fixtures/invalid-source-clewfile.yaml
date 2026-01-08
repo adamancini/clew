@@ -1,0 +1,5 @@
+version: 1
+marketplaces:
+  bad-marketplace:
+    source: invalid_source
+    repo: test/repo

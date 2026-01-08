@@ -1,4 +1,4 @@
-.PHONY: build clean test lint install plugin plugin-binaries plugin-clean
+.PHONY: build clean test test-unit test-e2e test-all lint install plugin plugin-binaries plugin-clean
 
 # Build variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -17,14 +17,29 @@ build:
 install:
 	go install $(LDFLAGS) ./cmd/clew
 
-# Run tests
+# Run all tests (unit + e2e)
 test:
 	go test -v ./...
+
+# Run only unit tests
+test-unit:
+	go test -v ./internal/...
+
+# Run only e2e tests
+test-e2e:
+	go test -v ./test/e2e/...
+
+# Run all tests with coverage
+test-all: test-unit test-e2e
 
 # Run tests with coverage
 test-coverage:
 	go test -coverprofile=coverage.out ./internal/config ./internal/diff ./internal/state ./internal/sync
 	go tool cover -html=coverage.out -o coverage.html
+
+# Run e2e tests with verbose output
+test-e2e-verbose:
+	go test -v -count=1 ./test/e2e/...
 
 # Lint
 lint:
