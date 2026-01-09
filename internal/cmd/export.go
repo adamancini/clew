@@ -65,15 +65,7 @@ type ExportedMCPServer struct {
 // runExport executes the export workflow.
 func runExport() error {
 	// 1. Read current state
-	var reader state.Reader
-	if useCLI {
-		// CLI reader is experimental and currently broken (issue #34)
-		reader = &state.CLIReader{}
-	} else {
-		// Filesystem reader is the default
-		reader = &state.FilesystemReader{}
-	}
-
+	reader := getStateReader()
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)
