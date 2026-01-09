@@ -381,7 +381,7 @@ func filterDiffByGitStatus(d *diff.Result, gitResult *git.CheckResult) *diff.Res
 
 	// Filter sources - skip those with git issues
 	for _, src := range d.Sources {
-		if gitResult.ShouldSkipMarketplace(src.Name) {
+		if gitResult.ShouldSkipSource(src.Name) {
 			// Change action to indicate this needs attention
 			src.Action = diff.ActionSkipGit
 		}

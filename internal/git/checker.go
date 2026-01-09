@@ -8,27 +8,27 @@ import (
 
 // CheckResult holds git status results for all local items in a Clewfile.
 type CheckResult struct {
-	Marketplaces map[string]Status // Key is marketplace name
-	Plugins      map[string]Status // Key is plugin name
-	Warnings     []string          // Items that should be skipped (uncommitted changes)
-	Info         []string          // Informational messages (ahead/behind)
-	SkipMarkets  map[string]bool   // Marketplaces to skip due to git issues
-	SkipPlugins  map[string]bool   // Plugins to skip due to git issues
+	Sources     map[string]Status // Key is source name
+	Plugins     map[string]Status // Key is plugin name
+	Warnings    []string          // Items that should be skipped (uncommitted changes)
+	Info        []string          // Informational messages (ahead/behind)
+	SkipSources map[string]bool   // Sources to skip due to git issues
+	SkipPlugins map[string]bool   // Plugins to skip due to git issues
 }
 
 // NewCheckResult creates an empty CheckResult.
 func NewCheckResult() *CheckResult {
 	return &CheckResult{
-		Marketplaces: make(map[string]Status),
-		Plugins:      make(map[string]Status),
-		SkipMarkets:  make(map[string]bool),
-		SkipPlugins:  make(map[string]bool),
+		Sources:     make(map[string]Status),
+		Plugins:     make(map[string]Status),
+		SkipSources: make(map[string]bool),
+		SkipPlugins: make(map[string]bool),
 	}
 }
 
-// ShouldSkipMarketplace returns true if the marketplace should be skipped due to git issues.
-func (r *CheckResult) ShouldSkipMarketplace(name string) bool {
-	return r.SkipMarkets[name]
+// ShouldSkipSource returns true if the source should be skipped due to git issues.
+func (r *CheckResult) ShouldSkipSource(name string) bool {
+	return r.SkipSources[name]
 }
 
 // ShouldSkipPlugin returns true if the plugin should be skipped due to git issues.
@@ -60,13 +60,13 @@ func (c *Checker) CheckClewfile(clewfile *config.Clewfile) *CheckResult {
 	for _, source := range clewfile.Sources {
 		if source.Source.Type == config.SourceTypeLocal && source.Source.Path != "" {
 			status := c.CheckRepository(source.Source.Path)
-			result.Marketplaces[source.Name] = status
+			result.Sources[source.Name] = status
 
 			switch status.Level {
 			case LevelWarning:
 				result.Warnings = append(result.Warnings,
 					fmt.Sprintf("source %q at %s: %s (skipping)", source.Name, source.Source.Path, status.Message))
-				result.SkipMarkets[source.Name] = true
+				result.SkipSources[source.Name] = true
 			case LevelInfo:
 				result.Info = append(result.Info,
 					fmt.Sprintf("source %q at %s: %s", source.Name, source.Source.Path, status.Message))
