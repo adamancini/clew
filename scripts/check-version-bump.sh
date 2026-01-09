@@ -73,3 +73,76 @@ fi
 
 info "CHANGELOG.md version: $CHANGELOG_VERSION (dated $CHANGELOG_DATE)"
 echo ""
+
+# Semantic version comparison function
+# Returns 0 (success) if $1 > $2, non-zero (failure) otherwise
+function version_gt() {
+    local ver1="$1"
+    local ver2="$2"
+
+    # Use sort -V for semantic version comparison
+    # If ver1 is NOT the minimum (first) when sorted, then ver1 > ver2
+    if [[ "$(printf '%s\n' "$ver1" "$ver2" | sort -V | head -n1)" != "$ver1" ]]; then
+        return 0  # ver1 > ver2
+    else
+        return 1  # ver1 <= ver2
+    fi
+}
+
+# Validation checks
+info "Running validation checks..."
+echo ""
+
+# Check 1: Plugin.json and CHANGELOG.md versions must match
+if [[ "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]]; then
+    error "Version mismatch!"
+    error "  plugin.json: $PLUGIN_VERSION"
+    error "  CHANGELOG.md: $CHANGELOG_VERSION"
+    error ""
+    error "Fix: Update both files to the same version"
+    exit $EXIT_VERSION_MISMATCH
+fi
+success "Plugin.json and CHANGELOG.md versions match ($PLUGIN_VERSION)"
+
+# Check 2: New version must be greater than latest tag
+LATEST_TAG_STRIPPED="${LATEST_TAG#v}"  # Remove 'v' prefix
+
+# Special case: First release (no real tags yet)
+if [[ "$LATEST_TAG" == "v0.0.0" ]]; then
+    warn "No previous tags found - this appears to be the first release"
+    success "Version $PLUGIN_VERSION will be the first tagged release"
+elif ! version_gt "$PLUGIN_VERSION" "$LATEST_TAG_STRIPPED"; then
+    error "Version not bumped!"
+    error "  New version: $PLUGIN_VERSION"
+    error "  Latest tag: $LATEST_TAG_STRIPPED"
+    error ""
+    error "Fix: Bump version to be greater than $LATEST_TAG_STRIPPED"
+    exit $EXIT_VERSION_NOT_GREATER
+else
+    success "Version $PLUGIN_VERSION > $LATEST_TAG_STRIPPED"
+fi
+
+# Check 3: Tag must not already exist for new version
+if git rev-parse "v$PLUGIN_VERSION" >/dev/null 2>&1; then
+    error "Tag v$PLUGIN_VERSION already exists!"
+    error ""
+    error "This version has already been released."
+    error "Fix: Bump to a higher version number"
+    exit $EXIT_TAG_EXISTS
+fi
+success "Tag v$PLUGIN_VERSION does not exist yet"
+
+# Check 4: CHANGELOG must have valid date
+if [[ -z "$CHANGELOG_DATE" ]]; then
+    error "CHANGELOG.md entry for version $CHANGELOG_VERSION is missing a date"
+    error ""
+    error "Expected format: ## [$CHANGELOG_VERSION] - YYYY-MM-DD"
+    error "Fix: Add date to CHANGELOG.md entry"
+    exit $EXIT_MISSING_DATE
+fi
+success "CHANGELOG.md has valid date: $CHANGELOG_DATE"
+
+echo ""
+success "All version checks passed!"
+success "Ready to merge and tag as v$PLUGIN_VERSION"
+exit $EXIT_SUCCESS
