@@ -19,12 +19,12 @@ const (
 	ActionSkipGit Action = "skip_git" // Skipped due to git status issues
 )
 
-// MarketplaceDiff represents the diff for a marketplace.
-type MarketplaceDiff struct {
-	Name   string
-	Action Action
-	Current *state.MarketplaceState
-	Desired *config.Marketplace
+// SourceDiff represents the diff for a source.
+type SourceDiff struct {
+	Name    string
+	Action  Action
+	Current *state.SourceState
+	Desired *config.Source
 }
 
 // PluginDiff represents the diff for a plugin.
@@ -47,9 +47,9 @@ type MCPServerDiff struct {
 
 // Result contains the complete diff between desired and current state.
 type Result struct {
-	Marketplaces []MarketplaceDiff
-	Plugins      []PluginDiff
-	MCPServers   []MCPServerDiff
+	Sources    []SourceDiff
+	Plugins    []PluginDiff
+	MCPServers []MCPServerDiff
 }
 
 // Compute calculates the diff between a Clewfile and current state.
@@ -59,8 +59,8 @@ func Compute(clewfile *config.Clewfile, current *state.State) *Result {
 
 // Summary returns counts of actions needed.
 func (r *Result) Summary() (add, update, remove, attention int) {
-	for _, m := range r.Marketplaces {
-		switch m.Action {
+	for _, s := range r.Sources {
+		switch s.Action {
 		case ActionAdd:
 			add++
 		case ActionUpdate:

@@ -16,11 +16,12 @@ func TestManager_Create(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: map[string]state.MarketplaceState{
+		Sources: map[string]state.SourceState{
 			"official": {
-				Name:   "official",
-				Source: "github",
-				Repo:   "anthropic/claude-plugins",
+				Name: "official",
+				Kind: "marketplace",
+				Type: "github",
+				URL:  "anthropic/claude-plugins",
 			},
 		},
 		Plugins: map[string]state.PluginState{
@@ -59,8 +60,8 @@ func TestManager_Create(t *testing.T) {
 	}
 
 	// Verify state was captured
-	if len(bak.State.Marketplaces) != 1 {
-		t.Errorf("Create() Marketplaces count = %v, want 1", len(bak.State.Marketplaces))
+	if len(bak.State.Sources) != 1 {
+		t.Errorf("Create() Sources count = %v, want 1", len(bak.State.Sources))
 	}
 	if len(bak.State.Plugins) != 1 {
 		t.Errorf("Create() Plugins count = %v, want 1", len(bak.State.Plugins))
@@ -82,7 +83,7 @@ func TestManager_CreateWithNote(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -102,7 +103,7 @@ func TestManager_List(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -161,7 +162,7 @@ func TestManager_Get(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -190,7 +191,7 @@ func TestManager_GetLatest(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -243,7 +244,7 @@ func TestManager_Delete(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -280,7 +281,7 @@ func TestBackup_ToState(t *testing.T) {
 	bak := &Backup{
 		ID: "test",
 		State: BackupState{
-			Marketplaces: map[string]state.MarketplaceState{
+			Sources: map[string]state.SourceState{
 				"test": {Name: "test"},
 			},
 			Plugins: map[string]state.PluginState{
@@ -294,8 +295,8 @@ func TestBackup_ToState(t *testing.T) {
 
 	s := bak.ToState()
 
-	if len(s.Marketplaces) != 1 {
-		t.Errorf("ToState() Marketplaces count = %v, want 1", len(s.Marketplaces))
+	if len(s.Sources) != 1 {
+		t.Errorf("ToState() Sources count = %v, want 1", len(s.Sources))
 	}
 	if len(s.Plugins) != 1 {
 		t.Errorf("ToState() Plugins count = %v, want 1", len(s.Plugins))

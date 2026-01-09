@@ -56,47 +56,47 @@ func (c *Checker) CheckClewfile(clewfile *config.Clewfile) *CheckResult {
 		return result
 	}
 
-	// Check local marketplaces
-	for name, marketplace := range clewfile.Marketplaces {
-		if marketplace.Source == "local" && marketplace.Path != "" {
-			status := c.CheckRepository(marketplace.Path)
-			result.Marketplaces[name] = status
+	// Check local sources
+	for _, source := range clewfile.Sources {
+		if source.Source.Type == config.SourceTypeLocal && source.Source.Path != "" {
+			status := c.CheckRepository(source.Source.Path)
+			result.Marketplaces[source.Name] = status
 
 			switch status.Level {
 			case LevelWarning:
 				result.Warnings = append(result.Warnings,
-					fmt.Sprintf("marketplace %q at %s: %s (skipping)", name, marketplace.Path, status.Message))
-				result.SkipMarkets[name] = true
+					fmt.Sprintf("source %q at %s: %s (skipping)", source.Name, source.Source.Path, status.Message))
+				result.SkipMarkets[source.Name] = true
 			case LevelInfo:
 				result.Info = append(result.Info,
-					fmt.Sprintf("marketplace %q at %s: %s", name, marketplace.Path, status.Message))
+					fmt.Sprintf("source %q at %s: %s", source.Name, source.Source.Path, status.Message))
 			case LevelError:
 				if status.Error != nil {
 					result.Info = append(result.Info,
-						fmt.Sprintf("marketplace %q at %s: %s", name, marketplace.Path, status.Message))
+						fmt.Sprintf("source %q at %s: %s", source.Name, source.Source.Path, status.Message))
 				}
 			}
 		}
 	}
 
-	// Check local plugins
+	// Check plugins with inline local sources
 	for _, plugin := range clewfile.Plugins {
-		if plugin.Source == "local" && plugin.Path != "" {
-			status := c.CheckRepository(plugin.Path)
+		if plugin.Source != nil && plugin.Source.Type == config.SourceTypeLocal && plugin.Source.Path != "" {
+			status := c.CheckRepository(plugin.Source.Path)
 			result.Plugins[plugin.Name] = status
 
 			switch status.Level {
 			case LevelWarning:
 				result.Warnings = append(result.Warnings,
-					fmt.Sprintf("plugin %q at %s: %s (skipping)", plugin.Name, plugin.Path, status.Message))
+					fmt.Sprintf("plugin %q at %s: %s (skipping)", plugin.Name, plugin.Source.Path, status.Message))
 				result.SkipPlugins[plugin.Name] = true
 			case LevelInfo:
 				result.Info = append(result.Info,
-					fmt.Sprintf("plugin %q at %s: %s", plugin.Name, plugin.Path, status.Message))
+					fmt.Sprintf("plugin %q at %s: %s", plugin.Name, plugin.Source.Path, status.Message))
 			case LevelError:
 				if status.Error != nil {
 					result.Info = append(result.Info,
-						fmt.Sprintf("plugin %q at %s: %s", plugin.Name, plugin.Path, status.Message))
+						fmt.Sprintf("plugin %q at %s: %s", plugin.Name, plugin.Source.Path, status.Message))
 				}
 			}
 		}

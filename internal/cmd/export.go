@@ -24,17 +24,26 @@ func newExportCmd() *cobra.Command {
 // ExportedClewfile represents the exported configuration in Clewfile format.
 // This is separate from config.Clewfile to allow for cleaner serialization.
 type ExportedClewfile struct {
-	Version      int                           `json:"version" yaml:"version"`
-	Marketplaces map[string]ExportedMarketplace `json:"marketplaces,omitempty" yaml:"marketplaces,omitempty"`
-	Plugins      []ExportedPlugin              `json:"plugins,omitempty" yaml:"plugins,omitempty"`
-	MCPServers   map[string]ExportedMCPServer  `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
+	Version    int                          `json:"version" yaml:"version"`
+	Sources    []ExportedSource             `json:"sources,omitempty" yaml:"sources,omitempty"`
+	Plugins    []ExportedPlugin             `json:"plugins,omitempty" yaml:"plugins,omitempty"`
+	MCPServers map[string]ExportedMCPServer `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
 }
 
-// ExportedMarketplace represents a marketplace for export.
-type ExportedMarketplace struct {
-	Source string `json:"source" yaml:"source"`
-	Repo   string `json:"repo,omitempty" yaml:"repo,omitempty"`
-	Path   string `json:"path,omitempty" yaml:"path,omitempty"`
+// ExportedSource represents a source for export.
+type ExportedSource struct {
+	Name   string              `json:"name" yaml:"name"`
+	Alias  string              `json:"alias,omitempty" yaml:"alias,omitempty"`
+	Kind   string              `json:"kind" yaml:"kind"`
+	Source ExportedSourceConfig `json:"source" yaml:"source"`
+}
+
+// ExportedSourceConfig represents source configuration for export.
+type ExportedSourceConfig struct {
+	Type string `json:"type" yaml:"type"`
+	URL  string `json:"url,omitempty" yaml:"url,omitempty"`
+	Ref  string `json:"ref,omitempty" yaml:"ref,omitempty"`
+	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 // ExportedPlugin represents a plugin for export.
@@ -98,24 +107,25 @@ func runExport() error {
 // convertStateToClewfile converts the current state to a Clewfile structure.
 func convertStateToClewfile(s *state.State) *ExportedClewfile {
 	exported := &ExportedClewfile{
-		Version:      1,
-		Marketplaces: make(map[string]ExportedMarketplace),
-		Plugins:      make([]ExportedPlugin, 0),
-		MCPServers:   make(map[string]ExportedMCPServer),
+		Version:    1,
+		Sources:    make([]ExportedSource, 0),
+		Plugins:    make([]ExportedPlugin, 0),
+		MCPServers: make(map[string]ExportedMCPServer),
 	}
 
-	// Convert marketplaces
-	for name, m := range s.Marketplaces {
-		em := ExportedMarketplace{
-			Source: m.Source,
+	// Convert sources
+	for name, src := range s.Sources {
+		es := ExportedSource{
+			Name: name,
+			Kind: src.Kind,
+			Source: ExportedSourceConfig{
+				Type: src.Type,
+				URL:  src.URL,
+				Ref:  src.Ref,
+				Path: src.Path,
+			},
 		}
-		switch m.Source {
-		case "github":
-			em.Repo = m.Repo
-		case "local":
-			em.Path = m.Path
-		}
-		exported.Marketplaces[name] = em
+		exported.Sources = append(exported.Sources, es)
 	}
 
 	// Convert plugins
@@ -156,9 +166,9 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		exported.MCPServers[name] = em
 	}
 
-	// Clean up empty maps for nicer output
-	if len(exported.Marketplaces) == 0 {
-		exported.Marketplaces = nil
+	// Clean up empty slices/maps for nicer output
+	if len(exported.Sources) == 0 {
+		exported.Sources = nil
 	}
 	if len(exported.Plugins) == 0 {
 		exported.Plugins = nil

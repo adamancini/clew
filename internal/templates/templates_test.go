@@ -200,7 +200,7 @@ func TestTemplateContentValidity(t *testing.T) {
 			// Check required fields
 			requiredFields := []string{
 				"version:",
-				"marketplaces:",
+				"sources:",
 				"plugins:",
 			}
 

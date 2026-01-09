@@ -160,17 +160,17 @@ func printDiffResultText(result *diff.Result) {
 	fmt.Println("Changes that would be made:")
 	fmt.Println()
 
-	// Marketplaces
-	hasMarketplaceChanges := false
-	for _, m := range result.Marketplaces {
-		if m.Action == diff.ActionNone {
+	// Sources
+	hasSourceChanges := false
+	for _, src := range result.Sources {
+		if src.Action == diff.ActionNone {
 			continue
 		}
-		if !hasMarketplaceChanges {
-			fmt.Println("Marketplaces:")
-			hasMarketplaceChanges = true
+		if !hasSourceChanges {
+			fmt.Println("Sources:")
+			hasSourceChanges = true
 		}
-		printDiffItem("marketplace", m.Name, m.Action, m.Desired != nil, m.Current != nil)
+		printDiffItem("source", src.Name, src.Action, src.Desired != nil, src.Current != nil)
 	}
 
 	// Plugins
@@ -180,7 +180,7 @@ func printDiffResultText(result *diff.Result) {
 			continue
 		}
 		if !hasPluginChanges {
-			if hasMarketplaceChanges {
+			if hasSourceChanges {
 				fmt.Println()
 			}
 			fmt.Println("Plugins:")
@@ -196,7 +196,7 @@ func printDiffResultText(result *diff.Result) {
 			continue
 		}
 		if !hasMCPChanges {
-			if hasMarketplaceChanges || hasPluginChanges {
+			if hasSourceChanges || hasPluginChanges {
 				fmt.Println()
 			}
 			fmt.Println("MCP Servers:")

@@ -10,6 +10,7 @@ import (
 )
 
 // fsMarketplaces represents the structure of known_marketplaces.json.
+// This is kept for backward compatibility when reading old state.
 type fsMarketplaces struct {
 	Repositories map[string]fsMarketplace `json:"repositories"`
 }
@@ -74,15 +75,15 @@ func (r *FilesystemReader) Read() (*State, error) {
 	}
 
 	state := &State{
-		Marketplaces: make(map[string]MarketplaceState),
-		Plugins:      make(map[string]PluginState),
-		MCPServers:   make(map[string]MCPServerState),
+		Sources:    make(map[string]SourceState),
+		Plugins:    make(map[string]PluginState),
+		MCPServers: make(map[string]MCPServerState),
 	}
 
-	// Read marketplaces
-	if err := r.readMarketplaces(claudeDir, state); err != nil {
-		// Non-fatal, continue with empty marketplaces
-		fmt.Fprintf(os.Stderr, "Warning: could not read marketplaces: %v\n", err)
+	// Read sources (marketplaces converted to sources)
+	if err := r.readSources(claudeDir, state); err != nil {
+		// Non-fatal, continue with empty sources
+		fmt.Fprintf(os.Stderr, "Warning: could not read sources: %v\n", err)
 	}
 
 	// Read plugins
@@ -108,30 +109,40 @@ func (r *FilesystemReader) Read() (*State, error) {
 	return state, nil
 }
 
-func (r *FilesystemReader) readMarketplaces(claudeDir string, state *State) error {
+func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 	path := filepath.Join(claudeDir, "plugins", "known_marketplaces.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil // No marketplaces file is okay
+			return nil // No sources file is okay
 		}
 		return err
 	}
 
+	// Read old marketplace format and convert to sources
 	var marketplaces fsMarketplaces
 	if err := json.Unmarshal(data, &marketplaces); err != nil {
 		return fmt.Errorf("failed to parse known_marketplaces.json: %w", err)
 	}
 
+	// Convert old marketplaces to sources with kind="marketplace"
 	for name, m := range marketplaces.Repositories {
-		state.Marketplaces[name] = MarketplaceState{
+		source := SourceState{
 			Name:            name,
-			Source:          m.Source,
-			Repo:            m.Repo,
-			Path:            m.Path,
+			Kind:            "marketplace", // Old marketplaces are all marketplace kind
+			Type:            m.Source,      // github or local
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
+
+		// Set URL or Path based on type
+		if m.Source == "github" {
+			source.URL = m.Repo
+		} else if m.Source == "local" {
+			source.Path = m.Path
+		}
+
+		state.Sources[name] = source
 	}
 
 	return nil

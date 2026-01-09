@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-01-09
+
+### Changed
+- **BREAKING**: Replaced `marketplaces` field with unified `sources` field
+- **BREAKING**: Sources now require `kind` field (marketplace, plugin, or local)
+- **BREAKING**: Source configuration moved to nested `source` object with `type`, `url`, `ref`, and `path` fields
+- Plugin `source` field changed from string to object for inline source definitions
+- State detection now converts old marketplace format to unified sources format
+
+### Added
+- Source `alias` field for collision handling and short references
+- Support for plugin-kind sources (standalone plugin repositories)
+- Support for local-kind sources (already-installed plugins)
+- Inline source syntax for one-off plugins
+- Optional `@source` reference for plugins when names match
+
+### Removed
+- Legacy `marketplaces` field and associated types
+- `Marketplace` and `MarketplaceState` types
+- `validateMarketplace()` function
+
+### Migration Guide
+
+**Before (v0.x):**
+```yaml
+marketplaces:
+  anthropics:
+    source: github
+    repo: github.com/anthropics/anthropic-marketplace
+
+plugins:
+  - plugin-dev@anthropics
+```
+
+**After (v1.0):**
+```yaml
+sources:
+  - name: anthropics-marketplace
+    alias: anthropics
+    kind: marketplace
+    source:
+      type: github
+      url: github.com/anthropics/anthropic-marketplace
+
+plugins:
+  - plugin-dev@anthropics
+```
+
+See issue #59 for full design rationale and examples.
+
 ## [0.4.4] - 2026-01-09
 
 ### Changed

@@ -5,54 +5,90 @@ import (
 	"testing"
 )
 
-func TestValidateMarketplace(t *testing.T) {
+func TestValidateSources(t *testing.T) {
 	tests := []struct {
 		name        string
-		marketplace Marketplace
+		sources     []Source
 		wantErr     bool
 		errContains string
 	}{
 		{
-			name:        "valid github",
-			marketplace: Marketplace{Source: "github", Repo: "org/repo"},
-			wantErr:     false,
+			name: "valid marketplace source",
+			sources: []Source{{
+				Name: "official",
+				Kind: SourceKindMarketplace,
+				Source: SourceConfig{
+					Type: SourceTypeGitHub,
+					URL:  "org/repo",
+				},
+			}},
+			wantErr: false,
 		},
 		{
-			name:        "valid local",
-			marketplace: Marketplace{Source: "local", Path: "/path/to/plugin"},
-			wantErr:     false,
+			name: "valid plugin source",
+			sources: []Source{{
+				Name: "my-plugin",
+				Kind: SourceKindPlugin,
+				Source: SourceConfig{
+					Type: SourceTypeGitHub,
+					URL:  "user/my-plugin",
+				},
+			}},
+			wantErr: false,
 		},
 		{
-			name:        "missing source",
-			marketplace: Marketplace{},
+			name: "valid local source",
+			sources: []Source{{
+				Name: "local-plugin",
+				Kind: SourceKindLocal,
+				Source: SourceConfig{
+					Type: SourceTypeLocal,
+					Path: "/path/to/plugin",
+				},
+			}},
+			wantErr: false,
+		},
+		{
+			name: "duplicate aliases",
+			sources: []Source{
+				{Name: "source1", Alias: "same", Kind: SourceKindPlugin, Source: SourceConfig{Type: SourceTypeGitHub, URL: "a/b"}},
+				{Name: "source2", Alias: "same", Kind: SourceKindPlugin, Source: SourceConfig{Type: SourceTypeGitHub, URL: "c/d"}},
+			},
 			wantErr:     true,
-			errContains: "source is required",
+			errContains: "duplicate alias",
 		},
 		{
-			name:        "github missing repo",
-			marketplace: Marketplace{Source: "github"},
+			name: "local kind with non-local type",
+			sources: []Source{{
+				Name: "bad",
+				Kind: SourceKindLocal,
+				Source: SourceConfig{
+					Type: SourceTypeGitHub,
+					URL:  "org/repo",
+				},
+			}},
 			wantErr:     true,
-			errContains: "repo is required",
+			errContains: "kind 'local' requires source.type 'local'",
 		},
 		{
-			name:        "local missing path",
-			marketplace: Marketplace{Source: "local"},
+			name: "marketplace kind with missing URL",
+			sources: []Source{{
+				Name: "bad",
+				Kind: SourceKindMarketplace,
+				Source: SourceConfig{
+					Type: SourceTypeGitHub,
+				},
+			}},
 			wantErr:     true,
-			errContains: "path is required",
-		},
-		{
-			name:        "invalid source",
-			marketplace: Marketplace{Source: "invalid"},
-			wantErr:     true,
-			errContains: "invalid source",
+			errContains: "github source requires url",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateMarketplace("test", tt.marketplace)
+			err := validateSources(tt.sources)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateMarketplace() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validateSources() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr && tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 				t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
@@ -79,13 +115,26 @@ func TestValidatePlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "valid local plugin",
-			plugin:  Plugin{Name: "my-plugin", Source: "local", Path: "/path/to/plugin"},
+			name: "valid inline local source",
+			plugin: Plugin{
+				Name: "my-plugin",
+				Source: &SourceConfig{
+					Type: SourceTypeLocal,
+					Path: "/path/to/plugin",
+				},
+			},
 			wantErr: false,
 		},
 		{
-			name:    "valid local plugin with scope",
-			plugin:  Plugin{Name: "my-plugin", Source: "local", Path: "~/.claude/plugins/repos/my-plugin", Scope: "user"},
+			name: "valid inline github source",
+			plugin: Plugin{
+				Name: "my-plugin",
+				Source: &SourceConfig{
+					Type: SourceTypeGitHub,
+					URL:  "user/my-plugin",
+				},
+				Scope: "user",
+			},
 			wantErr: false,
 		},
 		{
@@ -101,22 +150,35 @@ func TestValidatePlugin(t *testing.T) {
 			errContains: "invalid scope",
 		},
 		{
-			name:        "invalid source",
-			plugin:      Plugin{Name: "test", Source: "github"},
+			name: "inline source missing type",
+			plugin: Plugin{
+				Name:   "test",
+				Source: &SourceConfig{URL: "org/repo"},
+			},
 			wantErr:     true,
-			errContains: "invalid source",
+			errContains: "source type is required",
 		},
 		{
-			name:        "local missing path",
-			plugin:      Plugin{Name: "test", Source: "local"},
+			name: "inline github source missing url",
+			plugin: Plugin{
+				Name: "test",
+				Source: &SourceConfig{
+					Type: SourceTypeGitHub,
+				},
+			},
 			wantErr:     true,
-			errContains: "path is required",
+			errContains: "github source requires url",
 		},
 		{
-			name:        "path without source",
-			plugin:      Plugin{Name: "test", Path: "/some/path"},
+			name: "inline local source missing path",
+			plugin: Plugin{
+				Name: "test",
+				Source: &SourceConfig{
+					Type: SourceTypeLocal,
+				},
+			},
 			wantErr:     true,
-			errContains: "source must be 'local'",
+			errContains: "local source requires path",
 		},
 	}
 
@@ -203,9 +265,14 @@ func TestValidateMCPServer(t *testing.T) {
 func TestValidateFull(t *testing.T) {
 	valid := &Clewfile{
 		Version: 1,
-		Marketplaces: map[string]Marketplace{
-			"official": {Source: "github", Repo: "anthropics/plugins"},
-		},
+		Sources: []Source{{
+			Name: "official",
+			Kind: SourceKindMarketplace,
+			Source: SourceConfig{
+				Type: SourceTypeGitHub,
+				URL:  "anthropics/plugins",
+			},
+		}},
 		Plugins: []Plugin{
 			{Name: "test@official"},
 		},
@@ -220,9 +287,13 @@ func TestValidateFull(t *testing.T) {
 
 	invalid := &Clewfile{
 		Version: 1,
-		Marketplaces: map[string]Marketplace{
-			"bad": {Source: "invalid"},
-		},
+		Sources: []Source{{
+			Name: "bad",
+			Kind: SourceKindMarketplace,
+			Source: SourceConfig{
+				Type: "invalid",
+			},
+		}},
 		Plugins: []Plugin{
 			{Name: ""},
 		},
