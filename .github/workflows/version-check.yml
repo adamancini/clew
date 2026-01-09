@@ -1,0 +1,46 @@
+name: Version Bump Validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-version:
+    name: Check Version Bump
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for tag comparison
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run version validation
+        id: validation
+        run: |
+          bash scripts/check-version-bump.sh
+        continue-on-error: true
+
+      - name: Comment on PR (if failed)
+        if: steps.validation.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ **Version bump validation failed.** Please ensure:\n\n1. `plugin.json` version is bumped\n2. `CHANGELOG.md` has new entry with matching version\n3. New version is greater than latest git tag\n4. Date format in CHANGELOG.md is valid (YYYY-MM-DD)\n\nSee workflow logs for detailed error messages.\n\n---\n\n📖 [Version Bump Documentation](./.github/WORKFLOWS.md#version-bump-validation-workflow)'
+            })
+
+      - name: Fail workflow if validation failed
+        if: steps.validation.outcome == 'failure'
+        run: exit 1
