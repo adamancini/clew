@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified getting started workflow: run `clew export` instead of `clew init`
 - Renamed git checker fields to use consistent Sources terminology
 - Extracted `getStateReader()` helper to reduce code duplication
+- Exported plugins now sorted by source name for better readability
 
 ## [0.5.0] - 2026-01-09
 
