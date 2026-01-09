@@ -42,7 +42,17 @@ jobs:
           {
             echo "## Changelog"
             echo ""
-            git log --oneline -20 "$TAG_NAME"
+            # Get previous tag to generate incremental changelog
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || echo "")
+            if [ -n "$PREVIOUS_TAG" ]; then
+              echo "Changes since $PREVIOUS_TAG:"
+              echo ""
+              git log --oneline "$PREVIOUS_TAG".."$TAG_NAME"
+            else
+              echo "Initial release"
+              echo ""
+              git log --oneline "$TAG_NAME"
+            fi
             echo ""
             echo "## Installation"
             echo ""
