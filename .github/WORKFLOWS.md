@@ -120,6 +120,74 @@ sha256sum -c checksums.txt
 - Reviewers: adamancini
 - Commit prefix: `ci(actions)`
 
+## Version Bump Validation Workflow (`.github/workflows/version-check.yml`)
+
+**Triggers:** Pull requests to main branch (opened, synchronize, reopened, ready_for_review)
+
+**Purpose:** Enforces semantic version bumps before merging to main
+
+**Validation checks:**
+1. plugin.json version matches CHANGELOG.md top entry
+2. New version is semantically greater than latest git tag
+3. No git tag exists for the new version
+4. CHANGELOG.md has proper Keep a Changelog format with valid date
+
+**How it works:**
+- Fetches full git history (needed for tag comparison)
+- Runs `scripts/check-version-bump.sh` validation script
+- Posts helpful comment on PR if validation fails
+- Blocks merge via required status check in branch protection
+
+**Manual workflow:**
+
+```bash
+# 1. Update version in plugin.json
+jq '.version = "0.5.0"' .claude-plugin/plugin.json > tmp && mv tmp .claude-plugin/plugin.json
+
+# 2. Add entry to CHANGELOG.md with new version
+# Edit CHANGELOG.md to add:
+## [0.5.0] - 2026-01-09
+### Added
+- New feature description
+
+# 3. Create PR - validation runs automatically
+git checkout -b feature/new-feature
+git add .claude-plugin/plugin.json CHANGELOG.md
+git commit -m "feat: add new feature"
+git push
+
+# 4. After merge, create git tag to trigger release
+git checkout main
+git pull
+git tag v0.5.0
+git push origin v0.5.0
+```
+
+**Troubleshooting:**
+
+| Error | Solution |
+|-------|----------|
+| "Version mismatch" | Ensure plugin.json and CHANGELOG.md have same version |
+| "Version not bumped" | Increase version number above latest git tag |
+| "Tag already exists" | Version already released, bump to higher version |
+| "Missing date" | Add date to CHANGELOG.md in format: `## [X.Y.Z] - YYYY-MM-DD` |
+
+**Local testing:**
+
+```bash
+# Test validation script before pushing PR
+bash scripts/check-version-bump.sh
+```
+
+**CHANGELOG.md format:**
+
+Follow [Keep a Changelog](https://keepachangelog.com/) format:
+- Use `[Unreleased]` section for ongoing changes
+- Create versioned section when preparing release
+- Move changes from Unreleased to versioned section
+- Use semantic versioning (major.minor.patch)
+- Include date in format: `## [X.Y.Z] - YYYY-MM-DD`
+
 ## Status Badges
 
 The README includes three status badges:
@@ -200,4 +268,5 @@ Potential improvements:
 
 - [Makefile targets](../Makefile) - Build commands used by workflows
 - [CLAUDE.md](../CLAUDE.md) - Project architecture and design decisions
+- [Version Bump Validation Design](../docs/plans/2026-01-09-version-bump-validation-design.md) - Design rationale
 - [GitHub Actions Docs](https://docs.github.com/en/actions) - Official reference
