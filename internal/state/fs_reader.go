@@ -82,6 +82,12 @@ func (r *FilesystemReader) Read() (*State, error) {
 		fmt.Fprintf(os.Stderr, "Warning: could not read sources: %v\n", err)
 	}
 
+	// Read plugin repositories from repos/ directory
+	if err := r.readPluginRepos(claudeDir, state); err != nil {
+		// Non-fatal, continue without plugin repos
+		fmt.Fprintf(os.Stderr, "Warning: could not read plugin repos: %v\n", err)
+	}
+
 	// Read plugins
 	if err := r.readPlugins(claudeDir, state); err != nil {
 		// Non-fatal, continue with empty plugins
@@ -136,6 +142,54 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 			source.URL = m.Source.Repo
 		} else if m.Source.Source == "local" {
 			source.Path = m.Source.Path
+		}
+
+		state.Sources[name] = source
+	}
+
+	return nil
+}
+
+func (r *FilesystemReader) readPluginRepos(claudeDir string, state *State) error {
+	reposDir := filepath.Join(claudeDir, "plugins", "repos")
+
+	entries, err := os.ReadDir(reposDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // No repos directory is okay
+		}
+		return err
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		repoPath := filepath.Join(reposDir, name)
+
+		// Detect if it's a git repository
+		gitDir := filepath.Join(repoPath, ".git")
+		isGit := false
+		if _, err := os.Stat(gitDir); err == nil {
+			isGit = true
+		}
+
+		source := SourceState{
+			Name:            name,
+			Kind:            "plugin", // Repos are plugin-kind sources
+			InstallLocation: repoPath,
+		}
+
+		if isGit {
+			// Try to get git remote URL
+			source.Type = "github"
+			// TODO: Could parse .git/config for remote URL, but for now just mark as github
+			// Users can manually specify the URL in their Clewfile if needed
+		} else {
+			source.Type = "local"
+			source.Path = repoPath
 		}
 
 		state.Sources[name] = source
