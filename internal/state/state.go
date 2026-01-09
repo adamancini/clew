@@ -3,16 +3,18 @@ package state
 
 // State represents the current Claude Code configuration.
 type State struct {
-	Marketplaces map[string]MarketplaceState
-	Plugins      map[string]PluginState
-	MCPServers   map[string]MCPServerState
+	Sources    map[string]SourceState
+	Plugins    map[string]PluginState
+	MCPServers map[string]MCPServerState
 }
 
-// MarketplaceState represents a marketplace's current state.
-type MarketplaceState struct {
+// SourceState represents a source's current state.
+type SourceState struct {
 	Name            string
-	Source          string
-	Repo            string
+	Kind            string // marketplace, plugin, local
+	Type            string // github, local
+	URL             string
+	Ref             string
 	Path            string
 	InstallLocation string
 	LastUpdated     string

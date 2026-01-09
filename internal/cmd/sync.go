@@ -374,18 +374,18 @@ func filterDiffByGitStatus(d *diff.Result, gitResult *git.CheckResult) *diff.Res
 	}
 
 	filtered := &diff.Result{
-		Marketplaces: make([]diff.MarketplaceDiff, 0, len(d.Marketplaces)),
-		Plugins:      make([]diff.PluginDiff, 0, len(d.Plugins)),
-		MCPServers:   d.MCPServers, // MCP servers are not affected by git status
+		Sources:    make([]diff.SourceDiff, 0, len(d.Sources)),
+		Plugins:    make([]diff.PluginDiff, 0, len(d.Plugins)),
+		MCPServers: d.MCPServers, // MCP servers are not affected by git status
 	}
 
-	// Filter marketplaces - skip those with git issues
-	for _, m := range d.Marketplaces {
-		if gitResult.ShouldSkipMarketplace(m.Name) {
+	// Filter sources - skip those with git issues
+	for _, src := range d.Sources {
+		if gitResult.ShouldSkipMarketplace(src.Name) {
 			// Change action to indicate this needs attention
-			m.Action = diff.ActionSkipGit
+			src.Action = diff.ActionSkipGit
 		}
-		filtered.Marketplaces = append(filtered.Marketplaces, m)
+		filtered.Sources = append(filtered.Sources, src)
 	}
 
 	// Filter plugins - skip those with git issues

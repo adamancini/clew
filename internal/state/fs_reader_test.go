@@ -15,23 +15,23 @@ func TestFilesystemReaderMarketplaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Write test marketplaces
+	// Write test marketplaces (actual Claude Code format)
 	marketplacesJSON := `{
-  "repositories": {
-    "test-marketplace": {
-      "name": "test-marketplace",
+  "test-marketplace": {
+    "source": {
       "source": "github",
-      "repo": "owner/test-marketplace",
-      "installLocation": "/path/to/marketplace",
-      "lastUpdated": "2025-01-01T00:00:00Z"
+      "repo": "owner/test-marketplace"
     },
-    "local-marketplace": {
-      "name": "local-marketplace",
+    "installLocation": "/path/to/marketplace",
+    "lastUpdated": "2025-01-01T00:00:00Z"
+  },
+  "local-marketplace": {
+    "source": {
       "source": "local",
-      "path": "/local/path",
-      "installLocation": "/local/path",
-      "lastUpdated": "2025-01-01T00:00:00Z"
-    }
+      "path": "/local/path"
+    },
+    "installLocation": "/local/path",
+    "lastUpdated": "2025-01-01T00:00:00Z"
   }
 }`
 	if err := os.WriteFile(filepath.Join(pluginsDir, "known_marketplaces.json"), []byte(marketplacesJSON), 0644); err != nil {
@@ -44,27 +44,30 @@ func TestFilesystemReaderMarketplaces(t *testing.T) {
 		t.Fatalf("Read() error = %v", err)
 	}
 
-	if len(state.Marketplaces) != 2 {
-		t.Errorf("Marketplaces count = %d, want 2", len(state.Marketplaces))
+	if len(state.Sources) != 2 {
+		t.Errorf("Sources count = %d, want 2", len(state.Sources))
 	}
 
-	if m, ok := state.Marketplaces["test-marketplace"]; ok {
-		if m.Source != "github" {
-			t.Errorf("Marketplace source = %s, want github", m.Source)
+	if src, ok := state.Sources["test-marketplace"]; ok {
+		if src.Type != "github" {
+			t.Errorf("Source type = %s, want github", src.Type)
 		}
-		if m.Repo != "owner/test-marketplace" {
-			t.Errorf("Marketplace repo = %s, want owner/test-marketplace", m.Repo)
+		if src.URL != "owner/test-marketplace" {
+			t.Errorf("Source URL = %s, want owner/test-marketplace", src.URL)
+		}
+		if src.Kind != "marketplace" {
+			t.Errorf("Source kind = %s, want marketplace", src.Kind)
 		}
 	} else {
 		t.Error("Missing test-marketplace")
 	}
 
-	if m, ok := state.Marketplaces["local-marketplace"]; ok {
-		if m.Source != "local" {
-			t.Errorf("Marketplace source = %s, want local", m.Source)
+	if src, ok := state.Sources["local-marketplace"]; ok {
+		if src.Type != "local" {
+			t.Errorf("Source type = %s, want local", src.Type)
 		}
-		if m.Path != "/local/path" {
-			t.Errorf("Marketplace path = %s, want /local/path", m.Path)
+		if src.Path != "/local/path" {
+			t.Errorf("Source path = %s, want /local/path", src.Path)
 		}
 	} else {
 		t.Error("Missing local-marketplace")
@@ -173,8 +176,8 @@ func TestFilesystemReaderMissingFiles(t *testing.T) {
 		t.Fatal("State should not be nil")
 	}
 
-	if len(state.Marketplaces) != 0 {
-		t.Errorf("Marketplaces should be empty, got %d", len(state.Marketplaces))
+	if len(state.Sources) != 0 {
+		t.Errorf("Sources should be empty, got %d", len(state.Sources))
 	}
 	if len(state.Plugins) != 0 {
 		t.Errorf("Plugins should be empty, got %d", len(state.Plugins))

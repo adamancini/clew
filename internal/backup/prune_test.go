@@ -12,7 +12,7 @@ func TestManager_Prune(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -54,7 +54,7 @@ func TestManager_PruneNoOp(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}
@@ -87,7 +87,7 @@ func TestManager_PruneKeepZero(t *testing.T) {
 	manager := NewManagerWithDir(tmpDir, "v1.0.0")
 
 	currentState := &state.State{
-		Marketplaces: make(map[string]state.MarketplaceState),
+		Sources: make(map[string]state.SourceState),
 		Plugins:      make(map[string]state.PluginState),
 		MCPServers:   make(map[string]state.MCPServerState),
 	}

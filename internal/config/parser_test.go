@@ -63,10 +63,12 @@ func TestExpandEnvVars(t *testing.T) {
 func TestParseYAML(t *testing.T) {
 	content := []byte(`
 version: 1
-marketplaces:
-  official:
-    source: github
-    repo: anthropics/claude-plugins
+sources:
+  - name: official
+    kind: marketplace
+    source:
+      type: github
+      url: anthropics/claude-plugins
 plugins:
   - name: superpowers@official
     enabled: true
@@ -88,16 +90,18 @@ mcp_servers:
 		t.Errorf("Version = %d, want 1", clewfile.Version)
 	}
 
-	if len(clewfile.Marketplaces) != 1 {
-		t.Errorf("Marketplaces count = %d, want 1", len(clewfile.Marketplaces))
+	if len(clewfile.Sources) != 1 {
+		t.Errorf("Sources count = %d, want 1", len(clewfile.Sources))
 	}
 
-	if m, ok := clewfile.Marketplaces["official"]; ok {
-		if m.Source != "github" {
-			t.Errorf("Marketplace source = %s, want github", m.Source)
-		}
-	} else {
-		t.Error("Missing 'official' marketplace")
+	if clewfile.Sources[0].Name != "official" {
+		t.Errorf("Source name = %s, want official", clewfile.Sources[0].Name)
+	}
+	if clewfile.Sources[0].Kind != SourceKindMarketplace {
+		t.Errorf("Source kind = %s, want marketplace", clewfile.Sources[0].Kind)
+	}
+	if clewfile.Sources[0].Source.Type != SourceTypeGitHub {
+		t.Errorf("Source type = %s, want github", clewfile.Sources[0].Source.Type)
 	}
 
 	if len(clewfile.Plugins) != 2 {
@@ -135,9 +139,13 @@ func TestParseTOML(t *testing.T) {
 	content := []byte(`
 version = 1
 
-[marketplaces.official]
-source = "github"
-repo = "anthropics/claude-plugins"
+[[sources]]
+name = "official"
+kind = "marketplace"
+
+[sources.source]
+type = "github"
+url = "anthropics/claude-plugins"
 
 [[plugins]]
 name = "superpowers@official"
@@ -159,8 +167,8 @@ args = ["@modelcontextprotocol/server-filesystem", "/tmp"]
 		t.Errorf("Version = %d, want 1", clewfile.Version)
 	}
 
-	if len(clewfile.Marketplaces) != 1 {
-		t.Errorf("Marketplaces count = %d, want 1", len(clewfile.Marketplaces))
+	if len(clewfile.Sources) != 1 {
+		t.Errorf("Sources count = %d, want 1", len(clewfile.Sources))
 	}
 
 	if len(clewfile.Plugins) != 1 {
@@ -171,12 +179,16 @@ args = ["@modelcontextprotocol/server-filesystem", "/tmp"]
 func TestParseJSON(t *testing.T) {
 	content := []byte(`{
   "version": 1,
-  "marketplaces": {
-    "official": {
-      "source": "github",
-      "repo": "anthropics/claude-plugins"
+  "sources": [
+    {
+      "name": "official",
+      "kind": "marketplace",
+      "source": {
+        "type": "github",
+        "url": "anthropics/claude-plugins"
+      }
     }
-  },
+  ],
   "plugins": [
     {"name": "superpowers@official", "enabled": true, "scope": "user"},
     "simple-plugin@official"

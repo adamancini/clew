@@ -13,14 +13,14 @@ import (
 // Read implements Reader using claude CLI commands.
 func (r *CLIReader) Read() (*State, error) {
 	state := &State{
-		Marketplaces: make(map[string]MarketplaceState),
-		Plugins:      make(map[string]PluginState),
-		MCPServers:   make(map[string]MCPServerState),
+		Sources:    make(map[string]SourceState),
+		Plugins:    make(map[string]PluginState),
+		MCPServers: make(map[string]MCPServerState),
 	}
 
-	// Read marketplaces
-	if err := r.readMarketplaces(state); err != nil {
-		return nil, fmt.Errorf("failed to read marketplaces: %w", err)
+	// Read sources (from marketplace list command)
+	if err := r.readSources(state); err != nil {
+		return nil, fmt.Errorf("failed to read sources: %w", err)
 	}
 
 	// Read MCP servers
@@ -31,23 +31,23 @@ func (r *CLIReader) Read() (*State, error) {
 	return state, nil
 }
 
-// readMarketplaces parses output from `claude plugin marketplace list`.
-func (r *CLIReader) readMarketplaces(state *State) error {
+// readSources parses output from `claude plugin marketplace list`.
+func (r *CLIReader) readSources(state *State) error {
 	cmd := exec.Command("claude", "plugin", "marketplace", "list")
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to run claude plugin marketplace list: %w", err)
 	}
 
-	return parseMarketplaceList(output, state)
+	return parseSourceList(output, state)
 }
 
-// parseMarketplaceList parses the human-readable marketplace list output.
+// parseSourceList parses the human-readable marketplace list output.
 // Format:
 //
 //	❯ marketplace-name
 //	  Source: GitHub (owner/repo)
-func parseMarketplaceList(output []byte, state *State) error {
+func parseSourceList(output []byte, state *State) error {
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 	var currentName string
 
@@ -68,18 +68,19 @@ func parseMarketplaceList(output []byte, state *State) error {
 			sourceType := strings.ToLower(matches[1])
 			sourceValue := matches[2]
 
-			marketplace := MarketplaceState{
-				Name:   currentName,
-				Source: sourceType,
+			source := SourceState{
+				Name: currentName,
+				Kind: "marketplace", // CLI only shows marketplaces
+				Type: sourceType,
 			}
 
 			if sourceType == "github" {
-				marketplace.Repo = sourceValue
+				source.URL = sourceValue
 			} else {
-				marketplace.Path = sourceValue
+				source.Path = sourceValue
 			}
 
-			state.Marketplaces[currentName] = marketplace
+			state.Sources[currentName] = source
 			currentName = ""
 		}
 	}

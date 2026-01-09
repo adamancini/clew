@@ -8,12 +8,63 @@ import (
 	"strings"
 )
 
+// SourceKind represents the type of source.
+type SourceKind string
+
+const (
+	SourceKindMarketplace SourceKind = "marketplace"
+	SourceKindPlugin      SourceKind = "plugin"
+	SourceKindLocal       SourceKind = "local"
+)
+
+// SourceType represents how a source is accessed.
+type SourceType string
+
+const (
+	SourceTypeGitHub SourceType = "github"
+	SourceTypeLocal  SourceType = "local"
+)
+
+// SourceConfig defines where a source comes from.
+type SourceConfig struct {
+	Type SourceType `yaml:"type" toml:"type" json:"type"`
+	URL  string     `yaml:"url,omitempty" toml:"url,omitempty" json:"url,omitempty"`   // For github: org/repo or full URL
+	Ref  string     `yaml:"ref,omitempty" toml:"ref,omitempty" json:"ref,omitempty"`   // Optional git ref (branch/tag)
+	Path string     `yaml:"path,omitempty" toml:"path,omitempty" json:"path,omitempty"` // For local: filesystem path
+}
+
+// Source represents a unified source (marketplace, plugin repo, or local plugin).
+type Source struct {
+	Name   string       `yaml:"name" toml:"name" json:"name"`
+	Alias  string       `yaml:"alias,omitempty" toml:"alias,omitempty" json:"alias,omitempty"`
+	Kind   SourceKind   `yaml:"kind" toml:"kind" json:"kind"`
+	Source SourceConfig `yaml:"source" toml:"source" json:"source"`
+}
+
+// GetAlias returns the alias if set, otherwise returns the name.
+func (s *Source) GetAlias() string {
+	if s.Alias != "" {
+		return s.Alias
+	}
+	return s.Name
+}
+
 // Clewfile represents the parsed configuration file.
 type Clewfile struct {
-	Version      int                    `yaml:"version" toml:"version" json:"version"`
-	Marketplaces map[string]Marketplace `yaml:"marketplaces" toml:"marketplaces" json:"marketplaces"`
-	Plugins      []Plugin               `yaml:"plugins" toml:"plugins" json:"plugins"`
-	MCPServers   map[string]MCPServer   `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
+	Version    int                  `yaml:"version" toml:"version" json:"version"`
+	Sources    []Source             `yaml:"sources,omitempty" toml:"sources,omitempty" json:"sources,omitempty"`
+	Plugins    []Plugin             `yaml:"plugins" toml:"plugins" json:"plugins"`
+	MCPServers map[string]MCPServer `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
+}
+
+// GetSourceByAliasOrName finds a source by its alias or name.
+func (c *Clewfile) GetSourceByAliasOrName(ref string) (*Source, error) {
+	for i := range c.Sources {
+		if c.Sources[i].GetAlias() == ref || c.Sources[i].Name == ref {
+			return &c.Sources[i], nil
+		}
+	}
+	return nil, fmt.Errorf("source not found: %s", ref)
 }
 
 // Marketplace represents a plugin marketplace source.
@@ -24,13 +75,15 @@ type Marketplace struct {
 }
 
 // Plugin represents a plugin to install.
-// Can be specified as a simple string "name@marketplace" or as a struct.
+// Can be specified as:
+//   - Simple string: "name@source" or "name" (for plugin-kind sources with matching names)
+//   - Struct with inline source for one-off plugins
+//   - Struct with reference to named source
 type Plugin struct {
-	Name    string `yaml:"name" toml:"name" json:"name"`
-	Source  string `yaml:"source,omitempty" toml:"source,omitempty" json:"source,omitempty"` // "local" or empty (marketplace)
-	Path    string `yaml:"path,omitempty" toml:"path,omitempty" json:"path,omitempty"`       // Required for source: local
-	Enabled *bool  `yaml:"enabled,omitempty" toml:"enabled,omitempty" json:"enabled,omitempty"`
-	Scope   string `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
+	Name    string        `yaml:"name" toml:"name" json:"name"`
+	Source  *SourceConfig `yaml:"source,omitempty" toml:"source,omitempty" json:"source,omitempty"` // Inline source for one-off plugins
+	Enabled *bool         `yaml:"enabled,omitempty" toml:"enabled,omitempty" json:"enabled,omitempty"`
+	Scope   string        `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
 }
 
 // MCPServer represents an MCP server configuration.

@@ -7,12 +7,13 @@ import (
 
 // Operation represents a single sync operation performed.
 type Operation struct {
-	Type        string `json:"type"`            // "marketplace", "plugin", or "mcp"
+	Type        string `json:"type"`            // "source", "plugin", or "mcp"
 	Name        string `json:"name"`            // Item name
 	Action      string `json:"action"`          // "add", "enable", "disable"
 	Command     string `json:"command"`         // CLI command executed
 	Description string `json:"description"`     // Human-readable description
 	Success     bool   `json:"success"`         // Whether operation succeeded
+	Skipped     bool   `json:"skipped"`         // Whether operation was skipped
 	Error       string `json:"error,omitempty"` // Error message if failed
 }
 
@@ -56,25 +57,27 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 		Operations: []Operation{},
 	}
 
-	// Process marketplaces first (plugins depend on them)
-	for _, m := range d.Marketplaces {
-		switch m.Action {
+	// Process sources first (plugins depend on them)
+	for _, src := range d.Sources {
+		switch src.Action {
 		case diff.ActionAdd:
-			op, err := s.addMarketplace(m)
+			op, err := s.addSource(src)
 			result.Operations = append(result.Operations, op)
 			if err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
+			} else if op.Skipped {
+				result.Skipped++
 			} else {
 				result.Installed++
 			}
 		case diff.ActionRemove:
 			// Info only - don't remove
-			result.Attention = append(result.Attention, "marketplace: "+m.Name)
+			result.Attention = append(result.Attention, "source: "+src.Name)
 		case diff.ActionSkipGit:
 			// Skipped due to git status issues
 			result.Skipped++
-			result.Attention = append(result.Attention, "marketplace (git): "+m.Name+" - has uncommitted changes")
+			result.Attention = append(result.Attention, "source (git): "+src.Name+" - has uncommitted changes")
 		}
 	}
 

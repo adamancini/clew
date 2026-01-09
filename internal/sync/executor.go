@@ -23,32 +23,40 @@ func (r *DefaultCommandRunner) Run(name string, args ...string) ([]byte, error) 
 	return cmd.CombinedOutput()
 }
 
-// addMarketplace executes `claude plugin marketplace add <source>`.
-func (s *Syncer) addMarketplace(m diff.MarketplaceDiff) (Operation, error) {
+// addSource executes `claude plugin marketplace add <source>` for marketplace-kind sources.
+func (s *Syncer) addSource(src diff.SourceDiff) (Operation, error) {
 	op := Operation{
-		Type:   "marketplace",
-		Name:   m.Name,
+		Type:   "source",
+		Name:   src.Name,
 		Action: "add",
 	}
 
-	if m.Desired == nil {
+	if src.Desired == nil {
 		op.Success = false
-		op.Error = fmt.Sprintf("no desired state for marketplace %s", m.Name)
-		return op, fmt.Errorf("no desired state for marketplace %s", m.Name)
+		op.Error = fmt.Sprintf("no desired state for source %s", src.Name)
+		return op, fmt.Errorf("no desired state for source %s", src.Name)
+	}
+
+	// Only marketplace-kind sources can be added via CLI
+	if src.Desired.Kind != "marketplace" {
+		op.Success = true
+		op.Skipped = true
+		op.Description = fmt.Sprintf("Skip non-marketplace source (kind=%s): %s", src.Desired.Kind, src.Name)
+		return op, nil
 	}
 
 	var source string
-	switch m.Desired.Source {
+	switch src.Desired.Source.Type {
 	case "github":
-		source = m.Desired.Repo
-		op.Description = fmt.Sprintf("Add GitHub marketplace: %s", source)
+		source = src.Desired.Source.URL
+		op.Description = fmt.Sprintf("Add GitHub source: %s", source)
 	case "local":
-		source = m.Desired.Path
-		op.Description = fmt.Sprintf("Add local marketplace: %s", source)
+		source = src.Desired.Source.Path
+		op.Description = fmt.Sprintf("Add local source: %s", source)
 	default:
 		op.Success = false
-		op.Error = fmt.Sprintf("unknown marketplace source: %s", m.Desired.Source)
-		return op, fmt.Errorf("unknown marketplace source: %s", m.Desired.Source)
+		op.Error = fmt.Sprintf("unknown source type: %s", src.Desired.Source.Type)
+		return op, fmt.Errorf("unknown source type: %s", src.Desired.Source.Type)
 	}
 
 	// Build command string before executing
@@ -57,8 +65,8 @@ func (s *Syncer) addMarketplace(m diff.MarketplaceDiff) (Operation, error) {
 	output, err := s.runner.Run("claude", "plugin", "marketplace", "add", source)
 	if err != nil {
 		op.Success = false
-		op.Error = fmt.Sprintf("failed to add marketplace %s: %v\nOutput: %s", m.Name, err, string(output))
-		return op, fmt.Errorf("failed to add marketplace %s: %w\nOutput: %s", m.Name, err, string(output))
+		op.Error = fmt.Sprintf("failed to add source %s: %v\nOutput: %s", src.Name, err, string(output))
+		return op, fmt.Errorf("failed to add source %s: %w\nOutput: %s", src.Name, err, string(output))
 	}
 
 	op.Success = true

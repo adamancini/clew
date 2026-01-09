@@ -117,8 +117,8 @@ func TestConfirmFinalNo(t *testing.T) {
 func TestNewSelection(t *testing.T) {
 	sel := NewSelection()
 
-	if sel.Marketplaces == nil {
-		t.Error("expected non-nil Marketplaces map")
+	if sel.Sources == nil {
+		t.Error("expected non-nil Sources map")
 	}
 	if sel.Plugins == nil {
 		t.Error("expected non-nil Plugins map")
@@ -158,10 +158,10 @@ func TestActionSymbolVerb(t *testing.T) {
 func TestFilterDiffBySelection(t *testing.T) {
 	enabled := true
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{
-			{Name: "approved-marketplace", Action: diff.ActionAdd, Desired: &config.Marketplace{Source: "github", Repo: "test/repo"}},
-			{Name: "skipped-marketplace", Action: diff.ActionAdd, Desired: &config.Marketplace{Source: "github", Repo: "test/repo2"}},
-			{Name: "info-marketplace", Action: diff.ActionRemove, Current: &state.MarketplaceState{}},
+		Sources: []diff.SourceDiff{
+			{Name: "approved-source", Action: diff.ActionAdd, Desired: &config.Source{Name: "test", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "test/repo"}}},
+			{Name: "skipped-source", Action: diff.ActionAdd, Desired: &config.Source{Name: "test2", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "test/repo2"}}},
+			{Name: "info-source", Action: diff.ActionRemove, Current: &state.SourceState{}},
 		},
 		Plugins: []diff.PluginDiff{
 			{Name: "approved-plugin", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test", Enabled: &enabled}},
@@ -173,9 +173,9 @@ func TestFilterDiffBySelection(t *testing.T) {
 	}
 
 	selection := &Selection{
-		Marketplaces: map[string]bool{
-			"approved-marketplace": true,
-			"skipped-marketplace":  false,
+		Sources: map[string]bool{
+			"approved-source": true,
+			"skipped-source":  false,
 		},
 		Plugins: map[string]bool{
 			"approved-plugin": true,
@@ -188,25 +188,25 @@ func TestFilterDiffBySelection(t *testing.T) {
 
 	filtered := FilterDiffBySelection(result, selection)
 
-	// Check marketplaces
-	if len(filtered.Marketplaces) != 2 { // approved + info (remove)
-		t.Errorf("expected 2 marketplaces, got %d", len(filtered.Marketplaces))
+	// Check sources
+	if len(filtered.Sources) != 2 { // approved + info (remove)
+		t.Errorf("expected 2 sources, got %d", len(filtered.Sources))
 	}
 	foundApproved := false
 	foundInfo := false
-	for _, m := range filtered.Marketplaces {
-		if m.Name == "approved-marketplace" {
+	for _, src := range filtered.Sources {
+		if src.Name == "approved-source" {
 			foundApproved = true
 		}
-		if m.Name == "info-marketplace" && m.Action == diff.ActionRemove {
+		if src.Name == "info-source" && src.Action == diff.ActionRemove {
 			foundInfo = true
 		}
 	}
 	if !foundApproved {
-		t.Error("approved-marketplace should be in filtered result")
+		t.Error("approved-source should be in filtered result")
 	}
 	if !foundInfo {
-		t.Error("info-marketplace (ActionRemove) should be kept")
+		t.Error("info-source (ActionRemove) should be kept")
 	}
 
 	// Check plugins
@@ -229,8 +229,8 @@ func TestFilterDiffBySelection(t *testing.T) {
 func TestPromptForSelectionQuit(t *testing.T) {
 	enabled := true
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{
-			{Name: "test-marketplace", Action: diff.ActionAdd, Desired: &config.Marketplace{Source: "github", Repo: "test/repo"}},
+		Sources: []diff.SourceDiff{
+			{Name: "test-source", Action: diff.ActionAdd, Desired: &config.Source{Name: "test", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "test/repo"}}},
 		},
 		Plugins: []diff.PluginDiff{
 			{Name: "test-plugin", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test", Enabled: &enabled}},
@@ -256,9 +256,9 @@ func TestPromptForSelectionQuit(t *testing.T) {
 func TestPromptForSelectionApproveAll(t *testing.T) {
 	enabled := true
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{
-			{Name: "m1", Action: diff.ActionAdd, Desired: &config.Marketplace{Source: "github", Repo: "test/repo1"}},
-			{Name: "m2", Action: diff.ActionAdd, Desired: &config.Marketplace{Source: "github", Repo: "test/repo2"}},
+		Sources: []diff.SourceDiff{
+			{Name: "src1", Action: diff.ActionAdd, Desired: &config.Source{Name: "test", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "test/repo1"}}},
+			{Name: "src2", Action: diff.ActionAdd, Desired: &config.Source{Name: "test2", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "test/repo2"}}},
 		},
 		Plugins: []diff.PluginDiff{
 			{Name: "p1", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test1", Enabled: &enabled}},
@@ -283,11 +283,11 @@ func TestPromptForSelectionApproveAll(t *testing.T) {
 	}
 
 	// All items should be approved
-	if !selection.Marketplaces["m1"] {
-		t.Error("m1 should be approved")
+	if !selection.Sources["src1"] {
+		t.Error("src1 should be approved")
 	}
-	if !selection.Marketplaces["m2"] {
-		t.Error("m2 should be approved")
+	if !selection.Sources["src2"] {
+		t.Error("src2 should be approved")
 	}
 	if !selection.Plugins["p1"] {
 		t.Error("p1 should be approved")
@@ -300,8 +300,8 @@ func TestPromptForSelectionApproveAll(t *testing.T) {
 func TestPromptForSelectionPartialApproval(t *testing.T) {
 	enabled := true
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{
-			{Name: "m1", Action: diff.ActionAdd, Desired: &config.Marketplace{Source: "github", Repo: "test/repo1"}},
+		Sources: []diff.SourceDiff{
+			{Name: "src1", Action: diff.ActionAdd, Desired: &config.Source{Name: "test", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "test/repo1"}}},
 		},
 		Plugins: []diff.PluginDiff{
 			{Name: "p1", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test1", Enabled: &enabled}},
@@ -310,7 +310,7 @@ func TestPromptForSelectionPartialApproval(t *testing.T) {
 		MCPServers: []diff.MCPServerDiff{},
 	}
 
-	// Approve m1, approve p1, skip p2, confirm final
+	// Approve src1, approve p1, skip p2, confirm final
 	input := strings.NewReader("y\ny\nn\ny\n")
 	output := &bytes.Buffer{}
 	p := NewPrompterWithIO(input, output)
@@ -324,8 +324,8 @@ func TestPromptForSelectionPartialApproval(t *testing.T) {
 		t.Error("expected proceed=true")
 	}
 
-	if !selection.Marketplaces["m1"] {
-		t.Error("m1 should be approved")
+	if !selection.Sources["src1"] {
+		t.Error("src1 should be approved")
 	}
 	if !selection.Plugins["p1"] {
 		t.Error("p1 should be approved")
@@ -337,7 +337,7 @@ func TestPromptForSelectionPartialApproval(t *testing.T) {
 
 func TestPromptForSelectionNoChanges(t *testing.T) {
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{
+		Sources: []diff.SourceDiff{
 			{Name: "existing", Action: diff.ActionNone},
 		},
 		Plugins:    []diff.PluginDiff{},
@@ -363,8 +363,8 @@ func TestPromptForSelectionNoChanges(t *testing.T) {
 
 func TestPromptForSelectionSkipsRemoveActions(t *testing.T) {
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{
-			{Name: "remove-only", Action: diff.ActionRemove, Current: &state.MarketplaceState{}},
+		Sources: []diff.SourceDiff{
+			{Name: "remove-only", Action: diff.ActionRemove, Current: &state.SourceState{}},
 		},
 		Plugins:    []diff.PluginDiff{},
 		MCPServers: []diff.MCPServerDiff{},
@@ -388,7 +388,7 @@ func TestPromptForSelectionSkipsRemoveActions(t *testing.T) {
 func TestPromptForSelectionCancelFinal(t *testing.T) {
 	enabled := true
 	result := &diff.Result{
-		Marketplaces: []diff.MarketplaceDiff{},
+		Sources: []diff.SourceDiff{},
 		Plugins: []diff.PluginDiff{
 			{Name: "p1", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test", Enabled: &enabled}},
 		},
