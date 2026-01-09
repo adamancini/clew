@@ -133,8 +133,8 @@ fi
 success "Tag v$PLUGIN_VERSION does not exist yet"
 
 # Check 4: CHANGELOG must have valid date
-if [[ -z "$CHANGELOG_DATE" ]]; then
-    error "CHANGELOG.md entry for version $CHANGELOG_VERSION is missing a date"
+if [[ -z "$CHANGELOG_DATE" ]] || ! [[ "$CHANGELOG_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    error "CHANGELOG.md entry for version $CHANGELOG_VERSION is missing a valid date"
     error ""
     error "Expected format: ## [$CHANGELOG_VERSION] - YYYY-MM-DD"
     error "Fix: Add date to CHANGELOG.md entry"
