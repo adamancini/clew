@@ -116,8 +116,15 @@ func cliReaderWorks(t *testing.T) bool {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 
-	// If command fails with "unknown command", CLI reader is broken
+	// If command fails, check why
 	if err != nil {
+		// Check if claude command doesn't exist at all (CI environment)
+		if strings.Contains(err.Error(), "executable file not found") ||
+		   strings.Contains(err.Error(), "command not found") {
+			return false
+		}
+
+		// Check if claude exists but list subcommand doesn't (issue #34)
 		stderrStr := stderr.String()
 		if strings.Contains(stderrStr, "unknown command") ||
 		   strings.Contains(stderrStr, "error: unknown") {

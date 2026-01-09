@@ -24,7 +24,7 @@ type Result struct {
 	Failed     int
 	Attention  []string    // Items needing manual attention
 	Errors     []error     // Detailed error objects (not serialized to JSON)
-	Operations []Operation `json:"operations,omitempty"` // Individual operations performed
+	Operations []Operation `json:"operations"` // Individual operations performed (always included in JSON)
 }
 
 // Options configures sync behavior.
