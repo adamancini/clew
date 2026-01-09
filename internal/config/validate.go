@@ -132,16 +132,20 @@ func validateSources(sources []Source) error {
 				}
 			}
 		case SourceKindPlugin, SourceKindMarketplace:
-			if s.Source.Type == SourceTypeLocal {
-				return ValidationError{
-					Field:   fmt.Sprintf("sources[%d].source.type", i),
-					Message: fmt.Sprintf("kind '%s' cannot use source.type 'local'", s.Kind),
+			// Validate based on source type
+			if s.Source.Type == SourceTypeGitHub {
+				if s.Source.URL == "" {
+					return ValidationError{
+						Field:   fmt.Sprintf("sources[%d].source.url", i),
+						Message: "github source requires url",
+					}
 				}
-			}
-			if s.Source.Type == SourceTypeGitHub && s.Source.URL == "" {
-				return ValidationError{
-					Field:   fmt.Sprintf("sources[%d].source.url", i),
-					Message: "github source requires url",
+			} else if s.Source.Type == SourceTypeLocal {
+				if s.Source.Path == "" {
+					return ValidationError{
+						Field:   fmt.Sprintf("sources[%d].source.path", i),
+						Message: "local source requires path",
+					}
 				}
 			}
 		}

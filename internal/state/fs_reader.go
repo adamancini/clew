@@ -169,27 +169,13 @@ func (r *FilesystemReader) readPluginRepos(claudeDir string, state *State) error
 		name := entry.Name()
 		repoPath := filepath.Join(reposDir, name)
 
-		// Detect if it's a git repository
-		gitDir := filepath.Join(repoPath, ".git")
-		isGit := false
-		if _, err := os.Stat(gitDir); err == nil {
-			isGit = true
-		}
-
+		// All repos in ~/.claude/plugins/repos/ are local plugin-kind sources
 		source := SourceState{
 			Name:            name,
-			Kind:            "plugin", // Repos are plugin-kind sources
+			Kind:            "plugin",
+			Type:            "local",
+			Path:            repoPath,
 			InstallLocation: repoPath,
-		}
-
-		if isGit {
-			// Try to get git remote URL
-			source.Type = "github"
-			// TODO: Could parse .git/config for remote URL, but for now just mark as github
-			// Users can manually specify the URL in their Clewfile if needed
-		} else {
-			source.Type = "local"
-			source.Path = repoPath
 		}
 
 		state.Sources[name] = source

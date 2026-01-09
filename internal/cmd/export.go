@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -131,25 +130,8 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 
 	// Convert plugins
 	for fullName, p := range s.Plugins {
-		exportName := fullName
-
-		// For plugin-kind sources, omit @source if names match
-		if strings.Contains(fullName, "@") {
-			parts := strings.SplitN(fullName, "@", 2)
-			pluginName := parts[0]
-			sourceName := parts[1]
-
-			// Check if source exists and is plugin-kind
-			if src, ok := s.Sources[sourceName]; ok && src.Kind == "plugin" {
-				// If plugin name matches source name, omit @source
-				if pluginName == sourceName {
-					exportName = pluginName
-				}
-			}
-		}
-
 		ep := ExportedPlugin{
-			Name: exportName,
+			Name: fullName,
 		}
 		// Only include enabled if false (default is true)
 		if !p.Enabled {
