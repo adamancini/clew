@@ -10,18 +10,17 @@ import (
 )
 
 // fsMarketplaces represents the structure of known_marketplaces.json.
-type fsMarketplaces map[string]fsMarketplace
-
-type fsMarketplace struct {
-	Source          fsMarketplaceSource `json:"source"`
-	InstallLocation string              `json:"installLocation"`
-	LastUpdated     string              `json:"lastUpdated"`
+type fsMarketplaces struct {
+	Repositories map[string]fsMarketplace `json:"repositories"`
 }
 
-type fsMarketplaceSource struct {
-	Source string `json:"source"`
-	Repo   string `json:"repo,omitempty"`
-	Path   string `json:"path,omitempty"`
+type fsMarketplace struct {
+	Name            string `json:"name"`
+	Source          string `json:"source"`
+	Repo            string `json:"repo,omitempty"`
+	Path            string `json:"path,omitempty"`
+	InstallLocation string `json:"installLocation"`
+	LastUpdated     string `json:"lastUpdated"`
 }
 
 // fsInstalledPlugins represents the structure of installed_plugins.json.
@@ -98,11 +97,10 @@ func (r *FilesystemReader) Read() (*State, error) {
 		fmt.Fprintf(os.Stderr, "Warning: could not read settings: %v\n", err)
 	}
 
-	// Read MCP servers
-	home, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not determine home directory: %v\n", err)
-	} else if err := r.readMCPServers(home, state); err != nil {
+	// Read MCP servers - derive home from claudeDir to respect HOME env var
+	// claudeDir is ~/.claude, so home is parent directory
+	home := filepath.Dir(claudeDir)
+	if err := r.readMCPServers(home, state); err != nil {
 		// Non-fatal, continue with empty MCP servers
 		fmt.Fprintf(os.Stderr, "Warning: could not read MCP servers: %v\n", err)
 	}
@@ -125,12 +123,12 @@ func (r *FilesystemReader) readMarketplaces(claudeDir string, state *State) erro
 		return fmt.Errorf("failed to parse known_marketplaces.json: %w", err)
 	}
 
-	for name, m := range marketplaces {
+	for name, m := range marketplaces.Repositories {
 		state.Marketplaces[name] = MarketplaceState{
 			Name:            name,
-			Source:          m.Source.Source,
-			Repo:            m.Source.Repo,
-			Path:            m.Source.Path,
+			Source:          m.Source,
+			Repo:            m.Repo,
+			Path:            m.Path,
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
