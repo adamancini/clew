@@ -15,23 +15,23 @@ func TestFilesystemReaderMarketplaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Write test marketplaces
+	// Write test marketplaces (actual Claude Code format)
 	marketplacesJSON := `{
-  "repositories": {
-    "test-marketplace": {
-      "name": "test-marketplace",
+  "test-marketplace": {
+    "source": {
       "source": "github",
-      "repo": "owner/test-marketplace",
-      "installLocation": "/path/to/marketplace",
-      "lastUpdated": "2025-01-01T00:00:00Z"
+      "repo": "owner/test-marketplace"
     },
-    "local-marketplace": {
-      "name": "local-marketplace",
+    "installLocation": "/path/to/marketplace",
+    "lastUpdated": "2025-01-01T00:00:00Z"
+  },
+  "local-marketplace": {
+    "source": {
       "source": "local",
-      "path": "/local/path",
-      "installLocation": "/local/path",
-      "lastUpdated": "2025-01-01T00:00:00Z"
-    }
+      "path": "/local/path"
+    },
+    "installLocation": "/local/path",
+    "lastUpdated": "2025-01-01T00:00:00Z"
   }
 }`
 	if err := os.WriteFile(filepath.Join(pluginsDir, "known_marketplaces.json"), []byte(marketplacesJSON), 0644); err != nil {

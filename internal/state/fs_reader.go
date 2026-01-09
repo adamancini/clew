@@ -9,17 +9,13 @@ import (
 	"strings"
 )
 
-// fsMarketplaces represents the structure of known_marketplaces.json.
-// This is kept for backward compatibility when reading old state.
-type fsMarketplaces struct {
-	Repositories map[string]fsMarketplace `json:"repositories"`
-}
-
-type fsMarketplace struct {
-	Name            string `json:"name"`
-	Source          string `json:"source"`
-	Repo            string `json:"repo,omitempty"`
-	Path            string `json:"path,omitempty"`
+// fsMarketplaceEntry represents a single marketplace in known_marketplaces.json.
+type fsMarketplaceEntry struct {
+	Source struct {
+		Source string `json:"source"` // "github" or "local"
+		Repo   string `json:"repo,omitempty"`
+		Path   string `json:"path,omitempty"`
+	} `json:"source"`
 	InstallLocation string `json:"installLocation"`
 	LastUpdated     string `json:"lastUpdated"`
 }
@@ -119,27 +115,27 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 		return err
 	}
 
-	// Read old marketplace format and convert to sources
-	var marketplaces fsMarketplaces
+	// Read marketplace format and convert to sources
+	var marketplaces map[string]fsMarketplaceEntry
 	if err := json.Unmarshal(data, &marketplaces); err != nil {
 		return fmt.Errorf("failed to parse known_marketplaces.json: %w", err)
 	}
 
-	// Convert old marketplaces to sources with kind="marketplace"
-	for name, m := range marketplaces.Repositories {
+	// Convert marketplaces to sources with kind="marketplace"
+	for name, m := range marketplaces {
 		source := SourceState{
 			Name:            name,
-			Kind:            "marketplace", // Old marketplaces are all marketplace kind
-			Type:            m.Source,      // github or local
+			Kind:            "marketplace", // All items in known_marketplaces.json are marketplace kind
+			Type:            m.Source.Source, // github or local
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
 
 		// Set URL or Path based on type
-		if m.Source == "github" {
-			source.URL = m.Repo
-		} else if m.Source == "local" {
-			source.Path = m.Path
+		if m.Source.Source == "github" {
+			source.URL = m.Source.Repo
+		} else if m.Source.Source == "local" {
+			source.Path = m.Source.Path
 		}
 
 		state.Sources[name] = source
