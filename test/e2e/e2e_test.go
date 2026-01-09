@@ -163,8 +163,8 @@ func TestExportCommand(t *testing.T) {
 		if !strings.Contains(stdout, "version: 1") {
 			t.Errorf("expected version in output, got: %s", stdout)
 		}
-		if !strings.Contains(stdout, "marketplaces:") {
-			t.Errorf("expected marketplaces in output, got: %s", stdout)
+		if !strings.Contains(stdout, "sources:") {
+			t.Errorf("expected sources in output, got: %s", stdout)
 		}
 		if !strings.Contains(stdout, "plugins:") {
 			t.Errorf("expected plugins in output, got: %s", stdout)
@@ -187,8 +187,8 @@ func TestExportCommand(t *testing.T) {
 		if _, ok := result["version"]; !ok {
 			t.Error("expected version field in JSON output")
 		}
-		if _, ok := result["marketplaces"]; !ok {
-			t.Error("expected marketplaces field in JSON output")
+		if _, ok := result["sources"]; !ok {
+			t.Error("expected sources field in JSON output")
 		}
 		if _, ok := result["plugins"]; !ok {
 			t.Error("expected plugins field in JSON output")
@@ -588,8 +588,8 @@ func TestCLIReader(t *testing.T) {
 		if !strings.Contains(stdout, "version: 1") {
 			t.Errorf("expected version in output, got: %s", stdout)
 		}
-		if !strings.Contains(stdout, "marketplaces:") {
-			t.Errorf("expected marketplaces in output, got: %s", stdout)
+		if !strings.Contains(stdout, "sources:") {
+			t.Errorf("expected sources in output, got: %s", stdout)
 		}
 	})
 
@@ -729,15 +729,15 @@ func TestCLIReaderVsFilesystemReader(t *testing.T) {
 			t.Errorf("plugin count mismatch: CLI=%d, filesystem=%d", len(cliPlugins), len(fsPlugins))
 		}
 
-		// Compare marketplace counts
-		cliMarkets, cliOk := cliResult["marketplaces"].(map[string]interface{})
-		fsMarkets, fsOk := fsResult["marketplaces"].(map[string]interface{})
+		// Compare source counts
+		cliSources, cliOk := cliResult["sources"].([]interface{})
+		fsSources, fsOk := fsResult["sources"].([]interface{})
 		if !cliOk || !fsOk {
-			t.Fatal("expected marketplaces maps in both outputs")
+			t.Fatal("expected sources arrays in both outputs")
 		}
 
-		if len(cliMarkets) != len(fsMarkets) {
-			t.Errorf("marketplace count mismatch: CLI=%d, filesystem=%d", len(cliMarkets), len(fsMarkets))
+		if len(cliSources) != len(fsSources) {
+			t.Errorf("source count mismatch: CLI=%d, filesystem=%d", len(cliSources), len(fsSources))
 		}
 	})
 

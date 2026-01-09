@@ -1,5 +1,7 @@
 version: 1
-marketplaces:
-  bad-marketplace:
-    source: invalid_source
-    repo: test/repo
+sources:
+  - name: bad-source
+    kind: marketplace
+    source:
+      type: invalid_source
+      url: test/repo
