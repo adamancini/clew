@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-01-09
+
+### Changed
+- Updated CLAUDE.md with version bump validation system documentation
+
 ## [0.4.3] - 2026-01-09
 
 ### Fixed
