@@ -2,7 +2,7 @@
 
 **Date:** 2026-01-09
 **Author:** Ada Mancini
-**Status:** Draft
+**Status:** Implemented
 
 ## Overview
 
