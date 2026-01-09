@@ -327,6 +327,16 @@ See [schema/README.md](schema/README.md) for IDE setup details and examples.
 
 See [docs/design.md](docs/design.md) for full architecture and specification.
 
+## Contributing
+
+All pull requests to `main` require a version bump. Before creating a PR:
+
+1. Update version in `.claude-plugin/plugin.json`
+2. Add entry to `CHANGELOG.md` with new version and changes
+3. Ensure version is greater than latest git tag
+
+See [.github/WORKFLOWS.md](./.github/WORKFLOWS.md#version-bump-validation-workflow) for detailed workflow documentation.
+
 ## License
 
 MIT
