@@ -131,7 +131,7 @@ echo "Latest git tag: $LATEST_TAG"
 PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
 echo "plugin.json version: $PLUGIN_VERSION"
 
-# Extract CHANGELOG.md top entry
+# Extract CHANGELOG.md top entry (skips [Unreleased] section, finds first X.Y.Z version)
 CHANGELOG_VERSION=$(grep -m 1 -oP '## \[\K[0-9]+\.[0-9]+\.[0-9]+(?=\])' CHANGELOG.md || echo "")
 CHANGELOG_DATE=$(grep -m 1 -oP '## \[[0-9.]+\] - \K[0-9]{4}-[0-9]{2}-[0-9]{2}' CHANGELOG.md || echo "")
 echo "CHANGELOG.md version: $CHANGELOG_VERSION (dated $CHANGELOG_DATE)"
@@ -174,10 +174,44 @@ success "Ready to merge and tag as v$PLUGIN_VERSION"
 
 ### Initial Setup
 
-**Step 1: Sync versions**
-- Update plugin.json from `1.0.0` to `0.4.1` (current git tag)
+**Step 1: Sync versions (Choose one strategy)**
+
+Currently plugin.json shows `1.0.0` while the latest git tag is `v0.4.1`. Choose one approach:
+
+**Option A: Downgrade to match git tags (Recommended)**
+- Update plugin.json from `1.0.0` → `0.4.1`
+- Rationale: Version 1.0.0 was aspirational; project follows existing git tag history
+- Create CHANGELOG.md with entries from v0.4.1 onwards
+- Next release will be v0.4.2 or higher
+- **Recommended** if the project hasn't reached production-ready 1.0.0 stability
+
+```bash
+# Update plugin.json
+jq '.version = "0.4.1"' .claude-plugin/plugin.json > tmp && mv tmp .claude-plugin/plugin.json
+
+# Create CHANGELOG.md starting from v0.4.1
+# Document release history from git tags
+```
+
+**Option B: Create v1.0.0 tag**
+- Keep plugin.json at `1.0.0`
+- Create git tag `v1.0.0` to match current plugin version
+- Create CHANGELOG.md documenting changes from v0.4.1 to v1.0.0
+- Next release will be v1.0.1 or higher
+- **Use this** if current functionality represents production-ready 1.0.0 release
+
+```bash
+# Create CHANGELOG documenting v0.4.1 → v1.0.0 changes
+# Then create and push tag
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+**Decision impact:** The validation script requires new versions to exceed the latest tag. Your choice determines whether the next release is 0.4.2+ (Option A) or 1.0.1+ (Option B).
+
+**After choosing, proceed with CHANGELOG creation:**
 - Create CHANGELOG.md with Keep Changelog structure
-- Document existing releases or start fresh with v0.4.1 baseline
+- Document baseline version and prepare for future releases
 
 **Step 2: Add validation components**
 - Create `scripts/check-version-bump.sh` with execute permissions
@@ -209,14 +243,39 @@ When preparing a release:
 7. Create tag: `git tag v0.5.0 && git push origin v0.5.0`
 8. Release workflow runs automatically
 
-### Documentation
+### Documentation Updates
 
-Add to CONTRIBUTING.md or README.md:
+**Add to `.github/WORKFLOWS.md`:**
 
-- Version bump requirements for main branch
-- CHANGELOG format (link to keepachangelog.com)
-- Example of proper version update PR
-- Note about branch protection enforcement
+Create new section following the established workflow documentation pattern:
+
+#### Version Bump Validation Workflow (`.github/workflows/version-check.yml`)
+
+**Triggers:** Pull requests to main branch (opened, synchronize, reopened, ready_for_review)
+
+**Purpose:** Enforces semantic version bumps before merging to main
+
+**Validation checks:**
+- plugin.json version matches CHANGELOG.md top entry
+- New version is semantically greater than latest git tag
+- No git tag exists for the new version
+- CHANGELOG.md has proper Keep a Changelog format with valid date
+
+**Manual workflow:**
+```bash
+# Update version in plugin.json
+# Add entry to CHANGELOG.md with new version
+# Create PR - validation runs automatically
+# After merge, create git tag to trigger release
+```
+
+**Troubleshooting:**
+- See "Developer Workflow" section in design document
+- Refer to Keep Changelog format examples
+
+**Add brief reference to README.md:**
+- Note that version bumps are required for merging to main
+- Link to `.github/WORKFLOWS.md` for detailed workflow documentation
 
 ## CHANGELOG Format
 
@@ -246,6 +305,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.1] - 2025-XX-XX
 (Previous releases documented here)
 ```
+
+**Important: [Unreleased] Section Handling**
+
+The validation script **ignores** the `## [Unreleased]` section and validates against the topmost versioned entry (e.g., `## [0.5.0] - 2026-01-09`). This is intentional and follows Keep a Changelog best practices:
+
+- **During development**: Add changes to the `[Unreleased]` section
+- **Before creating a PR**: Move changes from `[Unreleased]` to a new versioned section with today's date
+- **Validation**: Script finds the first entry matching `## [X.Y.Z] - YYYY-MM-DD` pattern
+
+This workflow ensures:
+1. Changes are documented as they happen (in Unreleased)
+2. Releases have clear, dated entries
+3. Validation enforces proper release formatting
 
 ## Testing Strategy
 
@@ -278,6 +350,14 @@ bash scripts/check-version-bump.sh
 - Auto-suggest version bump based on conventional commits
 - Automated changelog generation from commit messages
 - Version bump reminder bot that comments on PRs without bumps
+
+## Related Documentation
+
+- [GitHub Actions Workflows](./.github/WORKFLOWS.md) - Complete CI/CD workflow documentation
+- [Release Workflow](./.github/WORKFLOWS.md#release-workflow) - Automated release process
+- [Makefile](./Makefile) - Build commands
+- [CLAUDE.md](./CLAUDE.md) - Project architecture and standards
+- [plugin.json](./.claude-plugin/plugin.json) - Plugin metadata and version
 
 ## References
 
