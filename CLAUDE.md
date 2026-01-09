@@ -80,6 +80,7 @@ The filesystem reader is now the default because it's more reliable and doesn't 
 | Auto-backup | Enabled by default on sync | Creates backup before changes; use --no-backup to skip |
 | Interactive mode | Available for sync/diff | Approve each change individually with -i/--interactive flag |
 | Exit codes | 0=success, 1=failure, 2=strict mode failure | Partial success exits 0 unless --strict |
+| Version management | Required for main branch PRs | All PRs require version bump in plugin.json and CHANGELOG.md |
 
 ## Implementation Status
 
@@ -121,6 +122,12 @@ The filesystem reader is now the default because it's more reliable and doesn't 
 - ✅ `--show-commands` flag to display CLI reconciliation commands
 - ✅ Comprehensive e2e test suite
 - ✅ JSON Schema for IDE validation and auto-completion
+- ✅ Version bump validation system
+  - Automated PR checks via GitHub Actions
+  - Validation script (`scripts/check-version-bump.sh`)
+  - CHANGELOG.md in Keep a Changelog format
+  - Branch protection for main branch
+  - Semantic version validation
 
 ### Plugin Integration
 - ✅ Claude Code plugin structure (`.claude-plugin/plugin.json`)
@@ -176,3 +183,61 @@ When modifying validation rules:
 | Plugin scopes | `validatePlugin()` | `plugins.*.scope.enum` |
 | MCP transports | `validateMCPServer()` | `mcp_servers.*.transport.enum` |
 | MCP scopes | `validateMCPServer()` | `mcp_servers.*.scope.enum` |
+
+## Version Bump Validation
+
+All PRs to `main` require version bumps. This is enforced by automated validation.
+
+### Components
+
+| Component | Purpose |
+|-----------|---------|
+| `scripts/check-version-bump.sh` | Bash validation script |
+| `.github/workflows/version-check.yml` | GitHub Actions workflow |
+| `CHANGELOG.md` | Keep a Changelog format |
+| Branch protection | Requires "Check Version Bump" status |
+
+### Validation Checks
+
+The validation script performs four checks:
+
+1. **Version match**: plugin.json version equals CHANGELOG.md top entry
+2. **Version bump**: New version > latest git tag (semantic versioning)
+3. **Tag uniqueness**: No git tag exists for new version
+4. **Date format**: CHANGELOG.md entry has valid date (YYYY-MM-DD)
+
+### Workflow
+
+```bash
+# 1. Bump version in plugin.json
+jq '.version = "0.5.0"' .claude-plugin/plugin.json > tmp && mv tmp .claude-plugin/plugin.json
+
+# 2. Update CHANGELOG.md
+## [0.5.0] - 2026-01-09
+### Added
+- Feature description
+
+# 3. Test locally
+bash scripts/check-version-bump.sh
+
+# 4. Create PR - validation runs automatically
+# 5. After merge, tag triggers release
+git tag v0.5.0 && git push origin v0.5.0
+```
+
+### Exit Codes
+
+| Code | Meaning | Fix |
+|------|---------|-----|
+| 0 | All checks passed | Ready to merge |
+| 1 | Version mismatch | Sync plugin.json and CHANGELOG.md |
+| 2 | Version not bumped | Increase version above latest tag |
+| 3 | Tag already exists | Use a higher version number |
+| 4 | Missing/invalid date | Add YYYY-MM-DD date to CHANGELOG |
+| 5 | Missing dependency | Install jq or git |
+
+### References
+
+- Design: `docs/plans/2026-01-09-version-bump-validation-design.md`
+- Workflow docs: `.github/WORKFLOWS.md#version-bump-validation-workflow`
+- Contributing: See README.md Contributing section
