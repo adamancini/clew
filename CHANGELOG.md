@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-01-09
+
+### Fixed
+- E2E tests updated for unified source model (fixes CI failures)
+- Added validation for invalid source types (github/local only)
+- Updated test fixtures to use sources format
+- Fixed `known_marketplaces.json` test fixture to match actual Claude Code structure
+
 ### Removed
 - `clew init` command - use `clew export` to generate Clewfile from existing setup
 - Template files (minimal.yaml, developer.yaml, full.yaml)

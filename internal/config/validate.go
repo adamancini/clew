@@ -117,6 +117,14 @@ func validateSources(sources []Source) error {
 			}
 		}
 
+		// Validate source type is valid
+		if s.Source.Type != SourceTypeGitHub && s.Source.Type != SourceTypeLocal {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].source.type", i),
+				Message: fmt.Sprintf("invalid source type '%s' (must be github or local)", s.Source.Type),
+			}
+		}
+
 		switch s.Kind {
 		case SourceKindLocal:
 			if s.Source.Type != SourceTypeLocal {
