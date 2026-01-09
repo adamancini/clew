@@ -13,7 +13,6 @@ import (
 	"github.com/adamancini/clew/internal/git"
 	"github.com/adamancini/clew/internal/interactive"
 	"github.com/adamancini/clew/internal/output"
-	"github.com/adamancini/clew/internal/state"
 	"github.com/adamancini/clew/internal/sync"
 )
 
@@ -88,15 +87,7 @@ func runSync(strict bool, interactiveMode bool, createBackup bool, short bool, s
 	}
 
 	// 4. Read current state
-	var reader state.Reader
-	if useCLI {
-		// CLI reader is experimental and currently broken (issue #34)
-		reader = &state.CLIReader{}
-	} else {
-		// Filesystem reader is the default
-		reader = &state.FilesystemReader{}
-	}
-
+	reader := getStateReader()
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)
@@ -381,7 +372,7 @@ func filterDiffByGitStatus(d *diff.Result, gitResult *git.CheckResult) *diff.Res
 
 	// Filter sources - skip those with git issues
 	for _, src := range d.Sources {
-		if gitResult.ShouldSkipMarketplace(src.Name) {
+		if gitResult.ShouldSkipSource(src.Name) {
 			// Change action to indicate this needs attention
 			src.Action = diff.ActionSkipGit
 		}

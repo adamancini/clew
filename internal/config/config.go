@@ -67,13 +67,6 @@ func (c *Clewfile) GetSourceByAliasOrName(ref string) (*Source, error) {
 	return nil, fmt.Errorf("source not found: %s", ref)
 }
 
-// Marketplace represents a plugin marketplace source.
-type Marketplace struct {
-	Source string `yaml:"source" toml:"source" json:"source"` // github, local
-	Repo   string `yaml:"repo,omitempty" toml:"repo,omitempty" json:"repo,omitempty"`
-	Path   string `yaml:"path,omitempty" toml:"path,omitempty" json:"path,omitempty"`
-}
-
 // Plugin represents a plugin to install.
 // Can be specified as:
 //   - Simple string: "name@source" or "name" (for plugin-kind sources with matching names)

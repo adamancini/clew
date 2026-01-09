@@ -13,7 +13,6 @@ import (
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/output"
-	"github.com/adamancini/clew/internal/state"
 	"github.com/adamancini/clew/internal/sync"
 )
 
@@ -134,15 +133,7 @@ By default, keeps the 30 most recent backups.`,
 // runBackupCreate creates a new backup.
 func runBackupCreate(note string) error {
 	// Read current state
-	var reader state.Reader
-	if useCLI {
-		// CLI reader is experimental and currently broken (issue #34)
-		reader = &state.CLIReader{}
-	} else {
-		// Filesystem reader is the default
-		reader = &state.FilesystemReader{}
-	}
-
+	reader := getStateReader()
 	currentState, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read current state: %w", err)
@@ -250,15 +241,7 @@ func runBackupRestore(id string, skipConfirm bool) error {
 	fmt.Println()
 
 	// Read current state
-	var reader state.Reader
-	if useCLI {
-		// CLI reader is experimental and currently broken (issue #34)
-		reader = &state.CLIReader{}
-	} else {
-		// Filesystem reader is the default
-		reader = &state.FilesystemReader{}
-	}
-
+	reader := getStateReader()
 	currentState, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read current state: %w", err)

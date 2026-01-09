@@ -320,8 +320,8 @@ func TestCheckClewfile(t *testing.T) {
 	checker.SetSkipPathCheck(true) // Skip path existence checks for testing
 	result := checker.CheckClewfile(clewfile)
 
-	// Should have warning for marketplace with uncommitted changes
-	if !result.ShouldSkipMarketplace("local-marketplace") {
+	// Should have warning for source with uncommitted changes
+	if !result.ShouldSkipSource("local-marketplace") {
 		t.Error("Expected local-marketplace to be skipped")
 	}
 

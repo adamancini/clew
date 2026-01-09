@@ -38,7 +38,6 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	SetVersion(version)
 
 	// Add subcommands
-	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newSyncCmd())
 	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newExportCmd())

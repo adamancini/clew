@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- `clew init` command - use `clew export` to generate Clewfile from existing setup
+- Template files (minimal.yaml, developer.yaml, full.yaml)
+- `internal/templates` package (1,076 lines removed)
+- Unused `Marketplace` type from config package
+- Duplicate state reader selection code across 5 command files
+
+### Changed
+- Simplified getting started workflow: run `clew export` instead of `clew init`
+- Renamed git checker fields to use consistent Sources terminology
+- Extracted `getStateReader()` helper to reduce code duplication
+- Exported plugins now sorted by source name for better readability
+
 ## [0.5.0] - 2026-01-09
 
 ### Changed
