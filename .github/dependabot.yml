@@ -1,4 +1,5 @@
 version: 2
+# Manual trigger: 2026-01-08
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
