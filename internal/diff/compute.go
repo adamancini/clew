@@ -11,35 +11,35 @@ import (
 // Compute calculates the diff between a Clewfile and current state.
 func compute(clewfile *config.Clewfile, current *state.State) *Result {
 	result := &Result{
-		Marketplaces: computeMarketplaceDiffs(clewfile.Marketplaces, current.Marketplaces),
-		Plugins:      computePluginDiffs(clewfile.Plugins, current.Plugins),
-		MCPServers:   computeMCPServerDiffs(clewfile.MCPServers, current.MCPServers),
+		Sources:    computeSourceDiffs(clewfile.Sources, current.Sources),
+		Plugins:    computePluginDiffs(clewfile.Plugins, current.Plugins),
+		MCPServers: computeMCPServerDiffs(clewfile.MCPServers, current.MCPServers),
 	}
 	return result
 }
 
-func computeMarketplaceDiffs(desired map[string]config.Marketplace, current map[string]state.MarketplaceState) []MarketplaceDiff {
-	var diffs []MarketplaceDiff
+func computeSourceDiffs(desired []config.Source, current map[string]state.SourceState) []SourceDiff {
+	var diffs []SourceDiff
 	seen := make(map[string]bool)
 
-	// Check each desired marketplace
-	for name, d := range desired {
-		seen[name] = true
+	// Check each desired source
+	for _, d := range desired {
+		seen[d.Name] = true
 		desiredCopy := d
 
-		if c, exists := current[name]; exists {
+		if c, exists := current[d.Name]; exists {
 			currentCopy := c
 			// Check if update needed (source changed)
-			if marketplaceNeedsUpdate(d, c) {
-				diffs = append(diffs, MarketplaceDiff{
-					Name:    name,
+			if sourceNeedsUpdate(d, c) {
+				diffs = append(diffs, SourceDiff{
+					Name:    d.Name,
 					Action:  ActionUpdate,
 					Current: &currentCopy,
 					Desired: &desiredCopy,
 				})
 			} else {
-				diffs = append(diffs, MarketplaceDiff{
-					Name:    name,
+				diffs = append(diffs, SourceDiff{
+					Name:    d.Name,
 					Action:  ActionNone,
 					Current: &currentCopy,
 					Desired: &desiredCopy,
@@ -47,19 +47,19 @@ func computeMarketplaceDiffs(desired map[string]config.Marketplace, current map[
 			}
 		} else {
 			// Needs to be added
-			diffs = append(diffs, MarketplaceDiff{
-				Name:    name,
+			diffs = append(diffs, SourceDiff{
+				Name:    d.Name,
 				Action:  ActionAdd,
 				Desired: &desiredCopy,
 			})
 		}
 	}
 
-	// Check for extra marketplaces not in Clewfile
+	// Check for extra sources not in Clewfile
 	for name, c := range current {
 		if !seen[name] {
 			currentCopy := c
-			diffs = append(diffs, MarketplaceDiff{
+			diffs = append(diffs, SourceDiff{
 				Name:    name,
 				Action:  ActionRemove,
 				Current: &currentCopy,
@@ -70,17 +70,25 @@ func computeMarketplaceDiffs(desired map[string]config.Marketplace, current map[
 	return diffs
 }
 
-func marketplaceNeedsUpdate(desired config.Marketplace, current state.MarketplaceState) bool {
-	// Check if source type changed
-	if desired.Source != current.Source {
+func sourceNeedsUpdate(desired config.Source, current state.SourceState) bool {
+	// Check if kind changed
+	if string(desired.Kind) != current.Kind {
 		return true
 	}
-	// Check if repo changed for github source
-	if desired.Source == "github" && desired.Repo != current.Repo {
+	// Check if source type changed
+	if string(desired.Source.Type) != current.Type {
+		return true
+	}
+	// Check if URL changed for github source
+	if desired.Source.Type == config.SourceTypeGitHub && desired.Source.URL != current.URL {
 		return true
 	}
 	// Check if path changed for local source
-	if desired.Source == "local" && desired.Path != current.Path {
+	if desired.Source.Type == config.SourceTypeLocal && desired.Source.Path != current.Path {
+		return true
+	}
+	// Check if ref changed
+	if desired.Source.Ref != current.Ref {
 		return true
 	}
 	return false

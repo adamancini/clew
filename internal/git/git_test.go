@@ -284,21 +284,31 @@ func TestCheckClewfile(t *testing.T) {
 	mock.AddCommand(pluginPath, "git rev-list --left-right --count HEAD...origin/main", []byte("0\t0\n"), nil)
 
 	clewfile := &config.Clewfile{
-		Marketplaces: map[string]config.Marketplace{
-			"local-marketplace": {
-				Source: "local",
-				Path:   marketplacePath,
+		Sources: []config.Source{
+			{
+				Name: "local-marketplace",
+				Kind: config.SourceKindLocal,
+				Source: config.SourceConfig{
+					Type: config.SourceTypeLocal,
+					Path: marketplacePath,
+				},
 			},
-			"github-marketplace": {
-				Source: "github",
-				Repo:   "anthropics/claude-plugins-official",
+			{
+				Name: "github-marketplace",
+				Kind: config.SourceKindMarketplace,
+				Source: config.SourceConfig{
+					Type: config.SourceTypeGitHub,
+					URL:  "anthropics/claude-plugins-official",
+				},
 			},
 		},
 		Plugins: []config.Plugin{
 			{
-				Name:   "my-plugin@local-marketplace",
-				Source: "local",
-				Path:   pluginPath,
+				Name: "my-plugin@local-marketplace",
+				Source: &config.SourceConfig{
+					Type: config.SourceTypeLocal,
+					Path: pluginPath,
+				},
 			},
 			{
 				Name: "other-plugin@github-marketplace",
@@ -333,10 +343,14 @@ func TestCheckClewfileGitNotAvailable(t *testing.T) {
 	mock.AddCommand("", "git --version", nil, errors.New("git not found"))
 
 	clewfile := &config.Clewfile{
-		Marketplaces: map[string]config.Marketplace{
-			"local-marketplace": {
-				Source: "local",
-				Path:   "/tmp/marketplace",
+		Sources: []config.Source{
+			{
+				Name: "local-marketplace",
+				Kind: config.SourceKindLocal,
+				Source: config.SourceConfig{
+					Type: config.SourceTypeLocal,
+					Path: "/tmp/marketplace",
+				},
 			},
 		},
 	}

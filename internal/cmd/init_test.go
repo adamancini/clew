@@ -37,8 +37,8 @@ func TestRunInit_DirectTemplate(t *testing.T) {
 		t.Errorf("Clewfile missing version field")
 	}
 
-	if !strings.Contains(string(content), "marketplaces:") {
-		t.Errorf("Clewfile missing marketplaces field")
+	if !strings.Contains(string(content), "sources:") {
+		t.Errorf("Clewfile missing sources field")
 	}
 
 	// Verify output message

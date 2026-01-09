@@ -10,8 +10,8 @@
 //  4. See CLAUDE.md "Schema Maintenance" section for full checklist
 //
 // Synced validation rules:
-//   - Marketplace sources: github, local (validateMarketplace)
-//   - Plugin sources: local or empty (validatePlugin)
+//   - Source kinds: marketplace, plugin, local (validateSources)
+//   - Source types: github, local (validateSources)
 //   - Plugin scopes: user, project (validatePlugin)
 //   - MCP transports: stdio, http, sse (validateMCPServer)
 //   - MCP scopes: user, project (validateMCPServer)
@@ -36,11 +36,14 @@ func (e ValidationError) Error() string {
 func Validate(c *Clewfile) error {
 	var errors []string
 
-	// Validate marketplaces
-	for name, m := range c.Marketplaces {
-		if err := validateMarketplace(name, m); err != nil {
-			errors = append(errors, err.Error())
-		}
+	// Validate sources
+	if err := validateSources(c.Sources); err != nil {
+		errors = append(errors, err.Error())
+	}
+
+	// Validate plugin references
+	if err := validatePluginReferences(c); err != nil {
+		errors = append(errors, err.Error())
 	}
 
 	// Validate plugins
@@ -64,33 +67,107 @@ func Validate(c *Clewfile) error {
 	return nil
 }
 
-func validateMarketplace(name string, m Marketplace) error {
-	if m.Source == "" {
-		return ValidationError{
-			Field:   fmt.Sprintf("marketplaces.%s.source", name),
-			Message: "source is required (github or local)",
+func validateSources(sources []Source) error {
+	aliases := make(map[string]bool)
+
+	for i, s := range sources {
+		// Validate required fields
+		if s.Name == "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].name", i),
+				Message: "name is required",
+			}
+		}
+
+		// Validate kind
+		validKinds := []SourceKind{
+			SourceKindMarketplace,
+			SourceKindPlugin,
+			SourceKindLocal,
+		}
+		kindValid := false
+		for _, k := range validKinds {
+			if s.Kind == k {
+				kindValid = true
+				break
+			}
+		}
+		if !kindValid {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].kind", i),
+				Message: fmt.Sprintf("invalid kind '%s' (must be marketplace, plugin, or local)", s.Kind),
+			}
+		}
+
+		// Check alias uniqueness
+		alias := s.GetAlias()
+		if aliases[alias] {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].alias", i),
+				Message: fmt.Sprintf("duplicate alias '%s'", alias),
+			}
+		}
+		aliases[alias] = true
+
+		// Validate source config based on kind
+		if s.Source.Type == "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].source.type", i),
+				Message: "source type is required (github or local)",
+			}
+		}
+
+		switch s.Kind {
+		case SourceKindLocal:
+			if s.Source.Type != SourceTypeLocal {
+				return ValidationError{
+					Field:   fmt.Sprintf("sources[%d].source.type", i),
+					Message: fmt.Sprintf("kind 'local' requires source.type 'local' (got '%s')", s.Source.Type),
+				}
+			}
+			if s.Source.Path == "" {
+				return ValidationError{
+					Field:   fmt.Sprintf("sources[%d].source.path", i),
+					Message: "local source requires path",
+				}
+			}
+		case SourceKindPlugin, SourceKindMarketplace:
+			if s.Source.Type == SourceTypeLocal {
+				return ValidationError{
+					Field:   fmt.Sprintf("sources[%d].source.type", i),
+					Message: fmt.Sprintf("kind '%s' cannot use source.type 'local'", s.Kind),
+				}
+			}
+			if s.Source.Type == SourceTypeGitHub && s.Source.URL == "" {
+				return ValidationError{
+					Field:   fmt.Sprintf("sources[%d].source.url", i),
+					Message: "github source requires url",
+				}
+			}
 		}
 	}
 
-	switch m.Source {
-	case "github":
-		if m.Repo == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("marketplaces.%s.repo", name),
-				Message: "repo is required for github source",
-			}
+	return nil
+}
+
+func validatePluginReferences(c *Clewfile) error {
+	for i, p := range c.Plugins {
+		// Skip plugins with inline sources
+		if p.Source != nil {
+			continue
 		}
-	case "local":
-		if m.Path == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("marketplaces.%s.path", name),
-				Message: "path is required for local source",
+
+		// Check if plugin name contains @source reference
+		if strings.Contains(p.Name, "@") {
+			parts := strings.SplitN(p.Name, "@", 2)
+			sourceRef := parts[1]
+
+			if _, err := c.GetSourceByAliasOrName(sourceRef); err != nil {
+				return ValidationError{
+					Field:   fmt.Sprintf("plugins[%d].name", i),
+					Message: fmt.Sprintf("references unknown source '%s'", sourceRef),
+				}
 			}
-		}
-	default:
-		return ValidationError{
-			Field:   fmt.Sprintf("marketplaces.%s.source", name),
-			Message: fmt.Sprintf("invalid source '%s' (must be github or local)", m.Source),
 		}
 	}
 
@@ -105,30 +182,31 @@ func validatePlugin(index int, p Plugin) error {
 		}
 	}
 
-	// Validate source (if specified)
-	if p.Source != "" && p.Source != "local" {
-		return ValidationError{
-			Field:   fmt.Sprintf("plugins[%d].source", index),
-			Message: fmt.Sprintf("invalid source '%s' (must be 'local' or empty)", p.Source),
+	// Validate inline source if present
+	if p.Source != nil {
+		if p.Source.Type == "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("plugins[%d].source.type", index),
+				Message: "source type is required (github or local)",
+			}
+		}
+
+		if p.Source.Type == SourceTypeGitHub && p.Source.URL == "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("plugins[%d].source.url", index),
+				Message: "github source requires url",
+			}
+		}
+
+		if p.Source.Type == SourceTypeLocal && p.Source.Path == "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("plugins[%d].source.path", index),
+				Message: "local source requires path",
+			}
 		}
 	}
 
-	// If source is local, path is required
-	if p.Source == "local" && p.Path == "" {
-		return ValidationError{
-			Field:   fmt.Sprintf("plugins[%d].path", index),
-			Message: "path is required for local source",
-		}
-	}
-
-	// If path is specified without source, that's an error
-	if p.Path != "" && p.Source != "local" {
-		return ValidationError{
-			Field:   fmt.Sprintf("plugins[%d].source", index),
-			Message: "source must be 'local' when path is specified",
-		}
-	}
-
+	// Validate scope
 	if p.Scope != "" && p.Scope != "user" && p.Scope != "project" {
 		return ValidationError{
 			Field:   fmt.Sprintf("plugins[%d].scope", index),

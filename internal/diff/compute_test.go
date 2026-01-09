@@ -11,20 +11,20 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-func TestComputeMarketplaces(t *testing.T) {
+func TestComputeSources(t *testing.T) {
 	clewfile := &config.Clewfile{
-		Marketplaces: map[string]config.Marketplace{
-			"existing": {Source: "github", Repo: "owner/existing"},
-			"new":      {Source: "github", Repo: "owner/new"},
-			"updated":  {Source: "github", Repo: "owner/updated-new"},
+		Sources: []config.Source{
+			{Name: "existing", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "owner/existing"}},
+			{Name: "new", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "owner/new"}},
+			{Name: "updated", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "owner/updated-new"}},
 		},
 	}
 
 	current := &state.State{
-		Marketplaces: map[string]state.MarketplaceState{
-			"existing": {Name: "existing", Source: "github", Repo: "owner/existing"},
-			"updated":  {Name: "updated", Source: "github", Repo: "owner/updated-old"},
-			"extra":    {Name: "extra", Source: "github", Repo: "owner/extra"},
+		Sources: map[string]state.SourceState{
+			"existing": {Name: "existing", Kind: "marketplace", Type: "github", URL: "owner/existing"},
+			"updated":  {Name: "updated", Kind: "marketplace", Type: "github", URL: "owner/updated-old"},
+			"extra":    {Name: "extra", Kind: "marketplace", Type: "github", URL: "owner/extra"},
 		},
 		Plugins:    make(map[string]state.PluginState),
 		MCPServers: make(map[string]state.MCPServerState),
@@ -32,14 +32,14 @@ func TestComputeMarketplaces(t *testing.T) {
 
 	result := Compute(clewfile, current)
 
-	// Should have 4 marketplace diffs
-	if len(result.Marketplaces) != 4 {
-		t.Errorf("Marketplaces count = %d, want 4", len(result.Marketplaces))
+	// Should have 4 source diffs
+	if len(result.Sources) != 4 {
+		t.Errorf("Sources count = %d, want 4", len(result.Sources))
 	}
 
 	actionCounts := make(map[Action]int)
-	for _, m := range result.Marketplaces {
-		actionCounts[m.Action]++
+	for _, src := range result.Sources {
+		actionCounts[src.Action]++
 	}
 
 	if actionCounts[ActionNone] != 1 {
@@ -64,8 +64,8 @@ func TestComputePlugins(t *testing.T) {
 			{Name: "to-enable@marketplace", Enabled: boolPtr(true)},
 			{Name: "to-disable@marketplace", Enabled: boolPtr(false)},
 		},
-		Marketplaces: make(map[string]config.Marketplace),
-		MCPServers:   make(map[string]config.MCPServer),
+		Sources:    []config.Source{},
+		MCPServers: make(map[string]config.MCPServer),
 	}
 
 	current := &state.State{
@@ -75,8 +75,8 @@ func TestComputePlugins(t *testing.T) {
 			"to-disable@marketplace": {Name: "to-disable", Marketplace: "marketplace", Enabled: true},
 			"extra@marketplace":      {Name: "extra", Marketplace: "marketplace", Enabled: true},
 		},
-		Marketplaces: make(map[string]state.MarketplaceState),
-		MCPServers:   make(map[string]state.MCPServerState),
+		Sources:    make(map[string]state.SourceState),
+		MCPServers: make(map[string]state.MCPServerState),
 	}
 
 	result := Compute(clewfile, current)
@@ -111,8 +111,8 @@ func TestComputeMCPServers(t *testing.T) {
 			"new-oauth":  {Transport: "http", URL: "https://api.example.com/mcp"},
 			"new-authed": {Transport: "http", URL: "https://api.example.com/mcp", Env: map[string]string{"API_KEY": "secret"}},
 		},
-		Marketplaces: make(map[string]config.Marketplace),
-		Plugins:      []config.Plugin{},
+		Sources: []config.Source{},
+		Plugins: []config.Plugin{},
 	}
 
 	current := &state.State{
@@ -120,8 +120,8 @@ func TestComputeMCPServers(t *testing.T) {
 			"existing": {Name: "existing", Transport: "stdio", Command: "npx"},
 			"extra":    {Name: "extra", Transport: "stdio", Command: "extra-cmd"},
 		},
-		Marketplaces: make(map[string]state.MarketplaceState),
-		Plugins:      make(map[string]state.PluginState),
+		Sources: make(map[string]state.SourceState),
+		Plugins: make(map[string]state.PluginState),
 	}
 
 	result := Compute(clewfile, current)
@@ -196,9 +196,9 @@ func TestServerRequiresOAuth(t *testing.T) {
 
 func TestSummary(t *testing.T) {
 	result := &Result{
-		Marketplaces: []MarketplaceDiff{
-			{Name: "m1", Action: ActionAdd},
-			{Name: "m2", Action: ActionRemove},
+		Sources: []SourceDiff{
+			{Name: "src1", Action: ActionAdd},
+			{Name: "src2", Action: ActionRemove},
 		},
 		Plugins: []PluginDiff{
 			{Name: "p1", Action: ActionAdd},
@@ -216,7 +216,7 @@ func TestSummary(t *testing.T) {
 
 	add, update, remove, attention := result.Summary()
 
-	if add != 3 { // m1 + p1 + s1
+	if add != 3 { // src1 + p1 + s1
 		t.Errorf("add = %d, want 3", add)
 	}
 	if update != 3 { // p2 + p3 + s3
@@ -225,7 +225,7 @@ func TestSummary(t *testing.T) {
 	if remove != 0 { // Non-destructive, removals count as attention
 		t.Errorf("remove = %d, want 0", remove)
 	}
-	if attention != 4 { // m2 + p4 + s2 + s4
+	if attention != 4 { // src2 + p4 + s2 + s4
 		t.Errorf("attention = %d, want 4", attention)
 	}
 }

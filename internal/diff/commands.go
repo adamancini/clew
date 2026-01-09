@@ -16,20 +16,26 @@ type Command struct {
 func (r *Result) GenerateCommands() []Command {
 	var commands []Command
 
-	// 1. Add marketplaces first (plugins depend on them)
-	for _, m := range r.Marketplaces {
-		if m.Action == ActionAdd && m.Desired != nil {
+	// 1. Add sources first (plugins depend on them)
+	for _, s := range r.Sources {
+		if s.Action == ActionAdd && s.Desired != nil {
+			// Only add marketplace-kind sources via CLI
+			// Plugin-kind and local-kind sources are for information only
+			if s.Desired.Kind != "marketplace" {
+				continue
+			}
+
 			var cmd string
-			switch m.Desired.Source {
+			switch s.Desired.Source.Type {
 			case "github":
-				cmd = fmt.Sprintf("claude plugin marketplace add %s %s", m.Name, m.Desired.Repo)
+				cmd = fmt.Sprintf("claude plugin marketplace add %s %s", s.Name, s.Desired.Source.URL)
 			case "local":
-				cmd = fmt.Sprintf("claude plugin marketplace add %s %s", m.Name, m.Desired.Path)
+				cmd = fmt.Sprintf("claude plugin marketplace add %s %s", s.Name, s.Desired.Source.Path)
 			}
 			if cmd != "" {
 				commands = append(commands, Command{
 					Command:     cmd,
-					Description: fmt.Sprintf("Add marketplace: %s", m.Name),
+					Description: fmt.Sprintf("Add source: %s", s.Name),
 				})
 			}
 		}

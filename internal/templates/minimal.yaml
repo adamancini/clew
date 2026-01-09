@@ -1,9 +1,11 @@
 version: 1
 
-marketplaces:
-  claude-plugins-official:
-    source: github
-    repo: anthropics/claude-plugins
+sources:
+  - name: claude-plugins-official
+    kind: marketplace
+    source:
+      type: github
+      url: anthropics/claude-plugins
 
 plugins:
   - context7@claude-plugins-official
