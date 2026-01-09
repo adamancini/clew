@@ -1,7 +1,10 @@
 package sync
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -458,5 +461,346 @@ func TestExecuteWithErrors(t *testing.T) {
 	}
 	if len(result.Errors) != 1 {
 		t.Errorf("Errors count = %d, want 1", len(result.Errors))
+	}
+}
+
+// MockFileEditor records file operations for testing.
+type MockFileEditor struct {
+	Files map[string][]byte
+}
+
+func newMockFileEditor() *MockFileEditor {
+	return &MockFileEditor{
+		Files: make(map[string][]byte),
+	}
+}
+
+func (m *MockFileEditor) ReadFile(path string) ([]byte, error) {
+	if data, ok := m.Files[path]; ok {
+		return data, nil
+	}
+	return nil, os.ErrNotExist
+}
+
+func (m *MockFileEditor) WriteFile(path string, data []byte, perm os.FileMode) error {
+	m.Files[path] = data
+	return nil
+}
+
+func TestInstallLocalPlugin(t *testing.T) {
+	// Create temp directory for test
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginsDir := filepath.Join(claudeDir, "plugins")
+	reposDir := filepath.Join(pluginsDir, "repos")
+	pluginDir := filepath.Join(reposDir, "test-local-plugin")
+
+	// Create directories
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create mock plugin.json
+	pluginJSON := `{
+		"name": "test-local-plugin",
+		"version": "1.2.3",
+		"description": "A test plugin"
+	}`
+	if err := os.WriteFile(filepath.Join(pluginDir, "plugin.json"), []byte(pluginJSON), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Initialize mock file editor with test data
+	mockEditor := newMockFileEditor()
+	mockEditor.Files[filepath.Join(pluginDir, "plugin.json")] = []byte(pluginJSON)
+
+	// Create syncer with mock editor
+	mockRunner := &MockCommandRunner{
+		Commands: []string{},
+		Outputs:  make(map[string][]byte),
+		Errors:   make(map[string]error),
+	}
+	syncer := NewSyncerWithRunnerAndEditor(mockRunner, mockEditor, claudeDir)
+
+	// Create plugin diff for local plugin
+	p := diff.PluginDiff{
+		Name:   "test-local-plugin",
+		Action: diff.ActionAdd,
+		Desired: &config.Plugin{
+			Name:  "test-local-plugin",
+			Scope: "user",
+			Source: &config.SourceConfig{
+				Type: config.SourceTypeLocal,
+				Path: pluginDir,
+			},
+		},
+	}
+
+	op, err := syncer.installLocalPlugin(p)
+	if err != nil {
+		t.Fatalf("installLocalPlugin() error = %v", err)
+	}
+
+	// Verify Operation struct
+	if op.Type != "plugin" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "plugin")
+	}
+	if op.Name != "test-local-plugin" {
+		t.Errorf("Operation.Name = %q, want %q", op.Name, "test-local-plugin")
+	}
+	if op.Action != "add" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "add")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+	if !strings.Contains(op.Command, "installed_plugins.json") {
+		t.Errorf("Operation.Command should mention installed_plugins.json: %s", op.Command)
+	}
+	if !strings.Contains(op.Command, "1.2.3") {
+		t.Errorf("Operation.Command should contain version: %s", op.Command)
+	}
+
+	// Verify no claude commands were run
+	if len(mockRunner.Commands) != 0 {
+		t.Errorf("Expected 0 CLI commands for local plugin, got %d: %v", len(mockRunner.Commands), mockRunner.Commands)
+	}
+
+	// Verify installed_plugins.json was created
+	installedPath := filepath.Join(claudeDir, "plugins", "installed_plugins.json")
+	data, ok := mockEditor.Files[installedPath]
+	if !ok {
+		t.Fatal("installed_plugins.json was not created")
+	}
+
+	var installed installedPluginsFile
+	if err := json.Unmarshal(data, &installed); err != nil {
+		t.Fatalf("Failed to parse installed_plugins.json: %v", err)
+	}
+
+	// Verify plugin entry
+	entries, ok := installed.Plugins["test-local-plugin"]
+	if !ok {
+		t.Fatal("Plugin entry not found in installed_plugins.json")
+	}
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if entry.Version != "1.2.3" {
+		t.Errorf("Version = %q, want %q", entry.Version, "1.2.3")
+	}
+	if entry.Scope != "user" {
+		t.Errorf("Scope = %q, want %q", entry.Scope, "user")
+	}
+	if entry.InstallPath != pluginDir {
+		t.Errorf("InstallPath = %q, want %q", entry.InstallPath, pluginDir)
+	}
+}
+
+func TestInstallLocalPluginUpdateExisting(t *testing.T) {
+	// Create temp directory for test
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginsDir := filepath.Join(claudeDir, "plugins")
+	reposDir := filepath.Join(pluginsDir, "repos")
+	pluginDir := filepath.Join(reposDir, "test-local-plugin")
+
+	// Create directories
+	if err := os.MkdirAll(pluginDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create mock plugin.json with new version
+	pluginJSON := `{
+		"name": "test-local-plugin",
+		"version": "2.0.0",
+		"description": "Updated plugin"
+	}`
+
+	// Create existing installed_plugins.json
+	existingInstalled := installedPluginsFile{
+		Version: 2,
+		Plugins: map[string][]pluginInstallInfo{
+			"test-local-plugin": {
+				{
+					Scope:        "user",
+					InstallPath:  pluginDir,
+					Version:      "1.0.0",
+					InstalledAt:  "2025-01-01T00:00:00Z",
+					LastUpdated:  "2025-01-01T00:00:00Z",
+					GitCommitSha: "abc123",
+				},
+			},
+		},
+	}
+	existingData, _ := json.Marshal(existingInstalled)
+
+	// Initialize mock file editor
+	mockEditor := newMockFileEditor()
+	mockEditor.Files[filepath.Join(pluginDir, "plugin.json")] = []byte(pluginJSON)
+	mockEditor.Files[filepath.Join(claudeDir, "plugins", "installed_plugins.json")] = existingData
+
+	// Create syncer with mock editor
+	mockRunner := &MockCommandRunner{
+		Commands: []string{},
+		Outputs:  make(map[string][]byte),
+		Errors:   make(map[string]error),
+	}
+	syncer := NewSyncerWithRunnerAndEditor(mockRunner, mockEditor, claudeDir)
+
+	// Create plugin diff for local plugin
+	p := diff.PluginDiff{
+		Name:   "test-local-plugin",
+		Action: diff.ActionAdd,
+		Desired: &config.Plugin{
+			Name:  "test-local-plugin",
+			Scope: "user",
+			Source: &config.SourceConfig{
+				Type: config.SourceTypeLocal,
+				Path: pluginDir,
+			},
+		},
+	}
+
+	op, err := syncer.installLocalPlugin(p)
+	if err != nil {
+		t.Fatalf("installLocalPlugin() error = %v", err)
+	}
+
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+
+	// Verify installed_plugins.json was updated
+	installedPath := filepath.Join(claudeDir, "plugins", "installed_plugins.json")
+	data := mockEditor.Files[installedPath]
+
+	var installed installedPluginsFile
+	if err := json.Unmarshal(data, &installed); err != nil {
+		t.Fatalf("Failed to parse installed_plugins.json: %v", err)
+	}
+
+	// Verify plugin entry was updated
+	entries := installed.Plugins["test-local-plugin"]
+	if len(entries) != 1 {
+		t.Fatalf("Expected 1 entry, got %d", len(entries))
+	}
+
+	entry := entries[0]
+	if entry.Version != "2.0.0" {
+		t.Errorf("Version = %q, want %q (should be updated)", entry.Version, "2.0.0")
+	}
+	// Original install time should be preserved
+	if entry.InstalledAt != "2025-01-01T00:00:00Z" {
+		t.Errorf("InstalledAt = %q, want original time preserved", entry.InstalledAt)
+	}
+}
+
+func TestInstallLocalPluginMissingPluginJSON(t *testing.T) {
+	// Create temp directory for test
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginDir := filepath.Join(tmpDir, "nonexistent-plugin")
+
+	// Initialize mock file editor with NO plugin.json
+	mockEditor := newMockFileEditor()
+
+	// Create syncer with mock editor
+	mockRunner := &MockCommandRunner{
+		Commands: []string{},
+		Outputs:  make(map[string][]byte),
+		Errors:   make(map[string]error),
+	}
+	syncer := NewSyncerWithRunnerAndEditor(mockRunner, mockEditor, claudeDir)
+
+	// Create plugin diff for local plugin
+	p := diff.PluginDiff{
+		Name:   "test-local-plugin",
+		Action: diff.ActionAdd,
+		Desired: &config.Plugin{
+			Name:  "test-local-plugin",
+			Scope: "user",
+			Source: &config.SourceConfig{
+				Type: config.SourceTypeLocal,
+				Path: pluginDir,
+			},
+		},
+	}
+
+	op, err := syncer.installLocalPlugin(p)
+	if err == nil {
+		t.Fatal("Expected error for missing plugin.json, got nil")
+	}
+
+	if op.Success {
+		t.Errorf("Operation.Success = %v, want false", op.Success)
+	}
+	if op.Error == "" {
+		t.Error("Operation.Error should contain error message")
+	}
+}
+
+func TestExecuteLocalPluginAdd(t *testing.T) {
+	// Create temp directory for test
+	tmpDir := t.TempDir()
+	claudeDir := filepath.Join(tmpDir, ".claude")
+	pluginDir := filepath.Join(tmpDir, "my-local-plugin")
+
+	// Create mock plugin.json
+	pluginJSON := `{"name": "my-local-plugin", "version": "1.0.0"}`
+
+	// Initialize mock file editor
+	mockEditor := newMockFileEditor()
+	mockEditor.Files[filepath.Join(pluginDir, "plugin.json")] = []byte(pluginJSON)
+
+	// Create syncer with mock editor
+	mockRunner := &MockCommandRunner{
+		Commands: []string{},
+		Outputs:  make(map[string][]byte),
+		Errors:   make(map[string]error),
+	}
+	syncer := NewSyncerWithRunnerAndEditor(mockRunner, mockEditor, claudeDir)
+
+	// Create diff with local plugin
+	d := &diff.Result{
+		Sources: []diff.SourceDiff{},
+		Plugins: []diff.PluginDiff{
+			{
+				Name:   "my-local-plugin",
+				Action: diff.ActionAdd,
+				Desired: &config.Plugin{
+					Name:  "my-local-plugin",
+					Scope: "user",
+					Source: &config.SourceConfig{
+						Type: config.SourceTypeLocal,
+						Path: pluginDir,
+					},
+				},
+			},
+		},
+		MCPServers: []diff.MCPServerDiff{},
+	}
+
+	result, err := syncer.Execute(d, Options{})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	// Should have installed 1 plugin
+	if result.Installed != 1 {
+		t.Errorf("Installed = %d, want 1", result.Installed)
+	}
+
+	// Should NOT have run any claude CLI commands
+	if len(mockRunner.Commands) != 0 {
+		t.Errorf("Expected 0 CLI commands for local plugin, got %d: %v", len(mockRunner.Commands), mockRunner.Commands)
+	}
+
+	// Verify installed_plugins.json was created
+	installedPath := filepath.Join(claudeDir, "plugins", "installed_plugins.json")
+	if _, ok := mockEditor.Files[installedPath]; !ok {
+		t.Error("installed_plugins.json should have been created")
 	}
 }

@@ -38,6 +38,15 @@ plugins:
     enabled: false
     scope: project
 
+  # Local repository plugin (not from marketplace)
+  # These are plugins cloned into ~/.claude/plugins/repos/
+  # clew will directly edit installed_plugins.json instead of using claude CLI
+  - name: my-local-plugin
+    source: local
+    path: ~/.claude/plugins/repos/my-local-plugin
+    enabled: true
+    scope: user
+
 mcp_servers:
   # stdio transport with environment variables
   episodic-memory:

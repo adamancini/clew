@@ -115,8 +115,21 @@ func parsePlugins(raw []interface{}) ([]Plugin, error) {
 				plugin.Scope = scope
 			}
 
-			// Handle inline source
-			if sourceData, ok := v["source"].(map[string]interface{}); ok {
+			// Handle inline source - supports two formats:
+			// 1. Simple format: source: "local" with path at top level
+			// 2. Nested format: source: { type: "local", path: "..." }
+			if sourceStr, ok := v["source"].(string); ok {
+				// Simple format: source is a string (e.g., "local")
+				sourceConfig := &SourceConfig{
+					Type: SourceType(sourceStr),
+				}
+				// For "local" source, path should be at top level
+				if path, ok := v["path"].(string); ok {
+					sourceConfig.Path = path
+				}
+				plugin.Source = sourceConfig
+			} else if sourceData, ok := v["source"].(map[string]interface{}); ok {
+				// Nested format: source is an object
 				sourceConfig := &SourceConfig{}
 
 				if typeStr, ok := sourceData["type"].(string); ok {

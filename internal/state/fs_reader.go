@@ -138,9 +138,10 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 		}
 
 		// Set URL or Path based on type
-		if m.Source.Source == "github" {
+		switch m.Source.Source {
+		case "github":
 			source.URL = m.Source.Repo
-		} else if m.Source.Source == "local" {
+		case "local":
 			source.Path = m.Source.Path
 		}
 
@@ -199,8 +200,10 @@ func (r *FilesystemReader) readPlugins(claudeDir string, state *State) error {
 		return fmt.Errorf("failed to parse installed_plugins.json: %w", err)
 	}
 
+	reposDir := filepath.Join(claudeDir, "plugins", "repos")
+
 	for fullName, installs := range plugins.Plugins {
-		// fullName is like "plugin@marketplace"
+		// fullName is like "plugin@marketplace" or just "plugin" for local plugins
 		parts := strings.SplitN(fullName, "@", 2)
 		pluginName := parts[0]
 		marketplace := ""
@@ -211,13 +214,23 @@ func (r *FilesystemReader) readPlugins(claudeDir string, state *State) error {
 		// Use the first (most recent) install for each plugin
 		if len(installs) > 0 {
 			install := installs[0]
+
+			// Detect if this is a local plugin:
+			// 1. If installPath is in the repos/ directory, OR
+			// 2. If the plugin name doesn't have @marketplace (no marketplace association)
+			//    and has a valid local path
+			isLocal := strings.HasPrefix(install.InstallPath, reposDir) ||
+				(marketplace == "" && install.InstallPath != "")
+
 			state.Plugins[fullName] = PluginState{
-				Name:        pluginName,
-				Marketplace: marketplace,
-				Scope:       install.Scope,
-				Enabled:     true, // Default to true, will be updated by settings
-				Version:     install.Version,
-				InstallPath: install.InstallPath,
+				Name:         pluginName,
+				Marketplace:  marketplace,
+				Scope:        install.Scope,
+				Enabled:      true, // Default to true, will be updated by settings
+				Version:      install.Version,
+				InstallPath:  install.InstallPath,
+				IsLocal:      isLocal,
+				GitCommitSha: install.GitCommitSha,
 			}
 		}
 	}

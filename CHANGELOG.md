@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-01-09
+
+### Added
+- Local repository plugin support with `source: local` format (#65)
+- Direct editing of `installed_plugins.json` for local plugins
+- Version detection from plugin.json for local plugins
+- Git commit SHA tracking for local plugin installations
+
 ## [0.5.1] - 2026-01-09
 
 ### Fixed
