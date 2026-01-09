@@ -57,20 +57,21 @@ curl -L https://github.com/adamancini/clew/releases/latest/download/clew-$(uname
 ## Quick Start
 
 ```bash
-# Create a new Clewfile from a template
-clew init
+# Export your current Claude Code setup to a Clewfile
+clew export > ~/.claude/Clewfile.yaml
 
-# Or choose a specific template
-clew init --template=minimal      # Basic starter (2 plugins)
-clew init --template=developer    # Development tools (3 plugins + MCP)
-clew init --template=full         # Comprehensive setup
+# Sync another machine to match your Clewfile
+clew sync
+
+# Check what would change before syncing
+clew diff
 ```
 
 ## Usage
 
 ```bash
-# Create a Clewfile from a template
-clew init
+# Export current state to Clewfile
+clew export > ~/.claude/Clewfile.yaml
 
 # Sync system to match Clewfile
 clew sync
@@ -78,32 +79,34 @@ clew sync
 # Show what would change (dry-run)
 clew diff
 
-# Export current state to Clewfile
-clew export -o yaml > ~/.config/claude/Clewfile
-
 # Check status
 clew status
 ```
 
-### Initialize a Clewfile
+### Create a Clewfile
 
+**Option 1: Export from existing setup (recommended)**
 ```bash
-clew init                              # Interactive template selection
-clew init --template=minimal           # Direct template selection
-clew init --template=developer         # Development tools template
-clew init --template=full              # Full setup template
-clew init --template=https://...       # Custom template from URL
-clew init --config ~/path/Clewfile     # Custom output location
-clew init --force                      # Overwrite existing Clewfile
+clew export > ~/.claude/Clewfile.yaml
 ```
 
-**Available templates:**
+**Option 2: Write manually**
+```yaml
+version: 1
 
-| Template | Description |
-|----------|-------------|
-| `minimal` | Basic starter with 2 core plugins |
-| `developer` | Development tools with 3 plugins + filesystem MCP server |
-| `full` | Comprehensive setup with all plugin options demonstrated |
+sources:
+  - name: claude-plugins-official
+    kind: marketplace
+    source:
+      type: github
+      url: anthropics/claude-plugins-official
+
+plugins:
+  - context7@claude-plugins-official
+  - episodic-memory@claude-plugins-official
+
+mcp_servers: {}
+```
 
 ### Interactive Mode
 
@@ -118,14 +121,14 @@ clew sync -i
 clew diff --interactive
 ```
 
-Interactive mode prompts for each marketplace, plugin, and MCP server change:
+Interactive mode prompts for each source, plugin, and MCP server change:
 
 ```
 $ clew sync --interactive
 
-Marketplaces:
+Sources:
   + private-marketplace (will add)
-    -> Add private-marketplace from github:you/plugins? [y/n/a/q] y
+    -> Add private-marketplace from github:you/plugins (kind=marketplace)? [y/n/a/q] y
 
 Plugins:
   + pr-review-toolkit@claude-plugins-official (will add)
