@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -136,6 +138,30 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		}
 		exported.Plugins = append(exported.Plugins, ep)
 	}
+
+	// Sort plugins by source name, then by plugin name for readability
+	sort.Slice(exported.Plugins, func(i, j int) bool {
+		iSource := ""
+		jSource := ""
+
+		// Extract source name from plugin name (part after @)
+		if strings.Contains(exported.Plugins[i].Name, "@") {
+			parts := strings.SplitN(exported.Plugins[i].Name, "@", 2)
+			iSource = parts[1]
+		}
+		if strings.Contains(exported.Plugins[j].Name, "@") {
+			parts := strings.SplitN(exported.Plugins[j].Name, "@", 2)
+			jSource = parts[1]
+		}
+
+		// Sort by source first
+		if iSource != jSource {
+			return iSource < jSource
+		}
+
+		// Then by plugin name
+		return exported.Plugins[i].Name < exported.Plugins[j].Name
+	})
 
 	// Convert MCP servers
 	for name, m := range s.MCPServers {
