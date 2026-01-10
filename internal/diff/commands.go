@@ -46,13 +46,22 @@ func (r *Result) GenerateCommands() []Command {
 		switch p.Action {
 		case ActionAdd:
 			if p.Desired != nil {
-				cmd := fmt.Sprintf("claude plugin install %s", p.Name)
-				if p.Desired.Scope != "" && p.Desired.Scope != "user" {
-					cmd += fmt.Sprintf(" --scope %s", p.Desired.Scope)
+				var cmd string
+				var desc string
+				if p.IsLocal() {
+					// Local plugins are installed by editing installed_plugins.json directly
+					cmd = fmt.Sprintf("# Edit ~/.claude/plugins/installed_plugins.json to add %s", p.Name)
+					desc = fmt.Sprintf("Install local plugin: %s (from %s)", p.Name, p.Desired.Source.Path)
+				} else {
+					cmd = fmt.Sprintf("claude plugin install %s", p.Name)
+					if p.Desired.Scope != "" && p.Desired.Scope != "user" {
+						cmd += fmt.Sprintf(" --scope %s", p.Desired.Scope)
+					}
+					desc = fmt.Sprintf("Install plugin: %s", p.Name)
 				}
 				commands = append(commands, Command{
 					Command:     cmd,
-					Description: fmt.Sprintf("Install plugin: %s", p.Name),
+					Description: desc,
 				})
 			}
 
@@ -88,7 +97,8 @@ func (r *Result) GenerateCommands() []Command {
 
 	// 3. MCP servers (manual setup required for OAuth)
 	for _, m := range r.MCPServers {
-		if m.Action == ActionAdd {
+		switch m.Action {
+		case ActionAdd:
 			if m.RequiresOAuth {
 				commands = append(commands, Command{
 					Command:     fmt.Sprintf("# Manual setup required: claude mcp add %s", m.Name),
@@ -105,7 +115,7 @@ func (r *Result) GenerateCommands() []Command {
 					})
 				}
 			}
-		} else if m.Action == ActionRemove {
+		case ActionRemove:
 			commands = append(commands, Command{
 				Command:     fmt.Sprintf("claude mcp remove %s", m.Name),
 				Description: fmt.Sprintf("Remove MCP server not in Clewfile: %s", m.Name),

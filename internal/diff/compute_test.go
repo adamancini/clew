@@ -229,3 +229,100 @@ func TestSummary(t *testing.T) {
 		t.Errorf("attention = %d, want 4", attention)
 	}
 }
+
+func TestPluginDiffIsLocal(t *testing.T) {
+	tests := []struct {
+		name     string
+		diff     PluginDiff
+		expected bool
+	}{
+		{
+			name: "marketplace plugin (no source)",
+			diff: PluginDiff{
+				Name: "test@marketplace",
+				Desired: &config.Plugin{
+					Name: "test@marketplace",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "marketplace plugin (github source)",
+			diff: PluginDiff{
+				Name: "test@marketplace",
+				Desired: &config.Plugin{
+					Name: "test@marketplace",
+					Source: &config.SourceConfig{
+						Type: config.SourceTypeGitHub,
+						URL:  "owner/repo",
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "local plugin (inline source)",
+			diff: PluginDiff{
+				Name: "my-local-plugin",
+				Desired: &config.Plugin{
+					Name: "my-local-plugin",
+					Source: &config.SourceConfig{
+						Type: config.SourceTypeLocal,
+						Path: "~/.claude/plugins/repos/my-local-plugin",
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "local plugin (from current state)",
+			diff: PluginDiff{
+				Name: "existing-local",
+				Current: &state.PluginState{
+					Name:    "existing-local",
+					IsLocal: true,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "marketplace plugin (from current state)",
+			diff: PluginDiff{
+				Name: "existing-marketplace",
+				Current: &state.PluginState{
+					Name:        "existing-marketplace",
+					Marketplace: "marketplace",
+					IsLocal:     false,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "local plugin (desired takes precedence)",
+			diff: PluginDiff{
+				Name: "plugin",
+				Desired: &config.Plugin{
+					Name: "plugin",
+					Source: &config.SourceConfig{
+						Type: config.SourceTypeLocal,
+						Path: "/path/to/plugin",
+					},
+				},
+				Current: &state.PluginState{
+					Name:    "plugin",
+					IsLocal: false, // Should be ignored, desired takes precedence
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.diff.IsLocal()
+			if got != tt.expected {
+				t.Errorf("IsLocal() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

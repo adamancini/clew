@@ -180,6 +180,18 @@ func TestValidatePlugin(t *testing.T) {
 			wantErr:     true,
 			errContains: "local source requires path",
 		},
+		{
+			name: "invalid source type",
+			plugin: Plugin{
+				Name: "test",
+				Source: &SourceConfig{
+					Type: "invalid",
+					Path: "/some/path",
+				},
+			},
+			wantErr:     true,
+			errContains: "invalid source type",
+		},
 	}
 
 	for _, tt := range tests {

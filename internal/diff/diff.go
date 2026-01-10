@@ -35,6 +35,17 @@ type PluginDiff struct {
 	Desired *config.Plugin
 }
 
+// IsLocal returns true if this is a local repository plugin (not marketplace).
+func (p *PluginDiff) IsLocal() bool {
+	if p.Desired != nil && p.Desired.Source != nil {
+		return p.Desired.Source.Type == config.SourceTypeLocal
+	}
+	if p.Current != nil {
+		return p.Current.IsLocal
+	}
+	return false
+}
+
 // MCPServerDiff represents the diff for an MCP server.
 type MCPServerDiff struct {
 	Name    string

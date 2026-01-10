@@ -2,6 +2,9 @@
 package sync
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/adamancini/clew/internal/diff"
 )
 
@@ -36,19 +39,58 @@ type Options struct {
 	Short   bool // One-line-per-item output format
 }
 
-// Syncer executes sync operations with a configurable command runner.
-type Syncer struct {
-	runner CommandRunner
+// FileEditor is an interface for filesystem operations.
+// This allows for mocking in tests.
+type FileEditor interface {
+	ReadFile(path string) ([]byte, error)
+	WriteFile(path string, data []byte, perm os.FileMode) error
 }
 
-// NewSyncer creates a Syncer with the default command runner.
+// DefaultFileEditor uses os package for file operations.
+type DefaultFileEditor struct{}
+
+func (e *DefaultFileEditor) ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+func (e *DefaultFileEditor) WriteFile(path string, data []byte, perm os.FileMode) error {
+	return os.WriteFile(path, data, perm)
+}
+
+// Syncer executes sync operations with a configurable command runner.
+type Syncer struct {
+	runner    CommandRunner
+	editor    FileEditor
+	claudeDir string // Path to ~/.claude directory
+}
+
+// NewSyncer creates a Syncer with the default command runner and file editor.
 func NewSyncer() *Syncer {
-	return &Syncer{runner: &DefaultCommandRunner{}}
+	home, _ := os.UserHomeDir()
+	return &Syncer{
+		runner:    &DefaultCommandRunner{},
+		editor:    &DefaultFileEditor{},
+		claudeDir: filepath.Join(home, ".claude"),
+	}
 }
 
 // NewSyncerWithRunner creates a Syncer with a custom command runner (for testing).
 func NewSyncerWithRunner(runner CommandRunner) *Syncer {
-	return &Syncer{runner: runner}
+	home, _ := os.UserHomeDir()
+	return &Syncer{
+		runner:    runner,
+		editor:    &DefaultFileEditor{},
+		claudeDir: filepath.Join(home, ".claude"),
+	}
+}
+
+// NewSyncerWithRunnerAndEditor creates a Syncer with custom runner and editor (for testing).
+func NewSyncerWithRunnerAndEditor(runner CommandRunner, editor FileEditor, claudeDir string) *Syncer {
+	return &Syncer{
+		runner:    runner,
+		editor:    editor,
+		claudeDir: claudeDir,
+	}
 }
 
 // Execute applies the diff to bring current state in line with Clewfile.
@@ -85,11 +127,21 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 	for _, p := range d.Plugins {
 		switch p.Action {
 		case diff.ActionAdd:
-			op, err := s.installPlugin(p)
+			var op Operation
+			var err error
+			if p.IsLocal() {
+				// Local plugins are installed by editing installed_plugins.json directly
+				op, err = s.installLocalPlugin(p)
+			} else {
+				// Marketplace plugins use claude CLI
+				op, err = s.installPlugin(p)
+			}
 			result.Operations = append(result.Operations, op)
 			if err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
+			} else if op.Skipped {
+				result.Skipped++
 			} else {
 				result.Installed++
 			}
@@ -99,6 +151,32 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 			if err != nil {
 				result.Failed++
 				result.Errors = append(result.Errors, err)
+			} else {
+				result.Updated++
+			}
+		case diff.ActionUpdate:
+			var op Operation
+			var err error
+			if p.IsLocal() {
+				// Local plugin updates are handled by editing installed_plugins.json
+				op, err = s.installLocalPlugin(p)
+			} else {
+				// Marketplace plugins - update would need reinstall
+				op = Operation{
+					Type:        "plugin",
+					Name:        p.Name,
+					Action:      "update",
+					Description: "Marketplace plugin update requires manual reinstall",
+					Success:     true,
+					Skipped:     true,
+				}
+			}
+			result.Operations = append(result.Operations, op)
+			if err != nil {
+				result.Failed++
+				result.Errors = append(result.Errors, err)
+			} else if op.Skipped {
+				result.Skipped++
 			} else {
 				result.Updated++
 			}

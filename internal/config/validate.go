@@ -141,14 +141,15 @@ func validateSources(sources []Source) error {
 			}
 		case SourceKindPlugin, SourceKindMarketplace:
 			// Validate based on source type
-			if s.Source.Type == SourceTypeGitHub {
+			switch s.Source.Type {
+			case SourceTypeGitHub:
 				if s.Source.URL == "" {
 					return ValidationError{
 						Field:   fmt.Sprintf("sources[%d].source.url", i),
 						Message: "github source requires url",
 					}
 				}
-			} else if s.Source.Type == SourceTypeLocal {
+			case SourceTypeLocal:
 				if s.Source.Path == "" {
 					return ValidationError{
 						Field:   fmt.Sprintf("sources[%d].source.path", i),
@@ -198,8 +199,16 @@ func validatePlugin(index int, p Plugin) error {
 	if p.Source != nil {
 		if p.Source.Type == "" {
 			return ValidationError{
-				Field:   fmt.Sprintf("plugins[%d].source.type", index),
+				Field:   fmt.Sprintf("plugins[%d].source", index),
 				Message: "source type is required (github or local)",
+			}
+		}
+
+		// Validate source type is valid
+		if p.Source.Type != SourceTypeGitHub && p.Source.Type != SourceTypeLocal {
+			return ValidationError{
+				Field:   fmt.Sprintf("plugins[%d].source", index),
+				Message: fmt.Sprintf("invalid source type '%s' (must be github or local)", p.Source.Type),
 			}
 		}
 
@@ -212,7 +221,7 @@ func validatePlugin(index int, p Plugin) error {
 
 		if p.Source.Type == SourceTypeLocal && p.Source.Path == "" {
 			return ValidationError{
-				Field:   fmt.Sprintf("plugins[%d].source.path", index),
+				Field:   fmt.Sprintf("plugins[%d].path", index),
 				Message: "local source requires path",
 			}
 		}

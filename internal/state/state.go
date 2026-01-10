@@ -22,12 +22,14 @@ type SourceState struct {
 
 // PluginState represents a plugin's current state.
 type PluginState struct {
-	Name        string
-	Marketplace string
-	Scope       string
-	Enabled     bool
-	Version     string
-	InstallPath string
+	Name         string
+	Marketplace  string
+	Scope        string
+	Enabled      bool
+	Version      string
+	InstallPath  string
+	IsLocal      bool   // True for local repository plugins (not marketplace)
+	GitCommitSha string // Git commit SHA for the plugin
 }
 
 // MCPServerState represents an MCP server's current state.
