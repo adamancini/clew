@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/adamancini/clew/internal/diff"
+	"github.com/adamancini/clew/internal/types"
 )
 
 // localPluginJSON represents the structure of a plugin.json file.
@@ -66,7 +67,7 @@ func (s *Syncer) addSource(src diff.SourceDiff) (Operation, error) {
 	}
 
 	// Only marketplace-kind sources can be added via CLI
-	if src.Desired.Kind != "marketplace" {
+	if !src.Desired.Kind.IsMarketplace() {
 		op.Success = true
 		op.Skipped = true
 		op.Description = fmt.Sprintf("Skip non-marketplace source (kind=%s): %s", src.Desired.Kind, src.Name)
@@ -74,11 +75,11 @@ func (s *Syncer) addSource(src diff.SourceDiff) (Operation, error) {
 	}
 
 	var source string
-	switch src.Desired.Source.Type {
-	case "github":
+	switch {
+	case src.Desired.Source.Type.IsGitHub():
 		source = src.Desired.Source.URL
 		op.Description = fmt.Sprintf("Add GitHub source: %s", source)
-	case "local":
+	case src.Desired.Source.Type.IsLocal():
 		source = src.Desired.Source.Path
 		op.Description = fmt.Sprintf("Add local source: %s", source)
 	default:
@@ -209,9 +210,12 @@ func (s *Syncer) addMCPServer(m diff.MCPServerDiff) (Operation, error) {
 	// Add the server name
 	args = append(args, m.Name)
 
+	// Parse transport type for helper method access
+	transport := types.TransportType(m.Desired.Transport)
+
 	// Add command/URL and args based on transport
-	switch m.Desired.Transport {
-	case "stdio":
+	switch {
+	case transport.IsStdio():
 		if m.Desired.Command == "" {
 			op.Success = false
 			op.Error = fmt.Sprintf("stdio MCP server %s requires a command", m.Name)
@@ -222,11 +226,11 @@ func (s *Syncer) addMCPServer(m diff.MCPServerDiff) (Operation, error) {
 		args = append(args, m.Desired.Command)
 		args = append(args, m.Desired.Args...)
 		op.Description = fmt.Sprintf("Add stdio MCP server: %s (command: %s)", m.Name, m.Desired.Command)
-	case "http", "sse":
+	case transport.IsHTTPBased():
 		if m.Desired.URL == "" {
 			op.Success = false
-			op.Error = fmt.Sprintf("http/sse MCP server %s requires a URL", m.Name)
-			return op, fmt.Errorf("http/sse MCP server %s requires a URL", m.Name)
+			op.Error = fmt.Sprintf("%s MCP server %s requires a URL", m.Desired.Transport, m.Name)
+			return op, fmt.Errorf("%s MCP server %s requires a URL", m.Desired.Transport, m.Name)
 		}
 		args = append(args, m.Desired.URL)
 		op.Description = fmt.Sprintf("Add %s MCP server: %s (url: %s)", m.Desired.Transport, m.Name, m.Desired.URL)
@@ -286,11 +290,8 @@ func (s *Syncer) installLocalPlugin(p diff.PluginDiff) (Operation, error) {
 	// Get git commit SHA
 	gitSha := s.getGitCommitSha(pluginPath)
 
-	// Determine scope (default to "user" if not specified)
-	scope := p.Desired.Scope
-	if scope == "" {
-		scope = "user"
-	}
+	// Determine scope using type's Default method
+	scope := types.Scope(p.Desired.Scope).Default().String()
 
 	// Update installed_plugins.json
 	if err := s.updateInstalledPlugins(p.Name, pluginPath, version, gitSha, scope); err != nil {

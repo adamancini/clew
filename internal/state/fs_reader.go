@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/adamancini/clew/internal/types"
 )
 
 // fsMarketplaceEntry represents a single marketplace in known_marketplaces.json.
@@ -131,17 +133,18 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 	for name, m := range marketplaces {
 		source := SourceState{
 			Name:            name,
-			Kind:            "marketplace", // All items in known_marketplaces.json are marketplace kind
-			Type:            m.Source.Source, // github or local
+			Kind:            types.SourceKindMarketplace.String(), // All items in known_marketplaces.json are marketplace kind
+			Type:            m.Source.Source,                      // github or local
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
 
 		// Set URL or Path based on type
-		switch m.Source.Source {
-		case "github":
+		sourceType := types.SourceType(m.Source.Source)
+		switch {
+		case sourceType.IsGitHub():
 			source.URL = m.Source.Repo
-		case "local":
+		case sourceType.IsLocal():
 			source.Path = m.Source.Path
 		}
 
@@ -173,8 +176,8 @@ func (r *FilesystemReader) readPluginRepos(claudeDir string, state *State) error
 		// All repos in ~/.claude/plugins/repos/ are local plugin-kind sources
 		source := SourceState{
 			Name:            name,
-			Kind:            "plugin",
-			Type:            "local",
+			Kind:            types.SourceKindPlugin.String(),
+			Type:            types.SourceTypeLocal.String(),
 			Path:            repoPath,
 			InstallLocation: repoPath,
 		}
@@ -289,7 +292,7 @@ func (r *FilesystemReader) readMCPServers(homeDir string, state *State) error {
 			Command:   server.Command,
 			Args:      server.Args,
 			URL:       server.URL,
-			Scope:     "user",
+			Scope:     types.ScopeUser.String(),
 		}
 	}
 

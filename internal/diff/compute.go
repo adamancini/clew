@@ -6,6 +6,7 @@ import (
 
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/state"
+	"github.com/adamancini/clew/internal/types"
 )
 
 // Compute calculates the diff between a Clewfile and current state.
@@ -214,8 +215,11 @@ func computeMCPServerDiffs(desired map[string]config.MCPServer, current map[stri
 // serverRequiresOAuth detects if an HTTP MCP server likely requires OAuth.
 // This is a heuristic based on common patterns.
 func serverRequiresOAuth(server config.MCPServer) bool {
-	// Only HTTP/SSE transports can require OAuth
-	if server.Transport != "http" && server.Transport != "sse" {
+	// Parse transport type for helper method access
+	transport := types.TransportType(server.Transport)
+
+	// Only HTTP-based transports can require OAuth
+	if !transport.IsHTTPBased() {
 		return false
 	}
 
@@ -250,8 +254,11 @@ func mcpServerNeedsUpdate(desired config.MCPServer, current state.MCPServerState
 		return true
 	}
 
+	// Parse transport type for helper method access
+	transport := types.TransportType(desired.Transport)
+
 	// For stdio, check command and args
-	if desired.Transport == "stdio" {
+	if transport.IsStdio() {
 		if desired.Command != current.Command {
 			return true
 		}
@@ -266,8 +273,8 @@ func mcpServerNeedsUpdate(desired config.MCPServer, current state.MCPServerState
 		}
 	}
 
-	// For HTTP/SSE, check URL
-	if (desired.Transport == "http" || desired.Transport == "sse") && desired.URL != current.URL {
+	// For HTTP-based transports, check URL
+	if transport.IsHTTPBased() && desired.URL != current.URL {
 		return true
 	}
 
