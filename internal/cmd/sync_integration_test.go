@@ -139,11 +139,6 @@ sources:
     source:
       type: github
       url: anthropics/plugins
-  - name: local-plugins
-    kind: local
-    source:
-      type: local
-      path: /path/to/plugins
 plugins:
   - test-plugin@official
   - name: another-plugin@official
@@ -155,7 +150,7 @@ mcp_servers:
     args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
 `,
 			wantErr:     false,
-			wantSources: 2,
+			wantSources: 1,
 			wantPlugins: 2,
 			wantMCP:     1,
 		},
@@ -640,41 +635,6 @@ func TestIntegration_BackupCreation(t *testing.T) {
 }
 
 // TestIntegration_DiffWithGitStatus tests git status checking integration.
-func TestIntegration_DiffWithGitStatus(t *testing.T) {
-	ts := newTestSetup(t)
-	defer ts.cleanup()
-
-	// Create a simple Clewfile with local source
-	clewfile := `version: 1
-sources:
-  - name: my-plugin
-    kind: plugin
-    source:
-      type: local
-      path: /nonexistent/path
-plugins:
-  - name: my-plugin
-    source:
-      type: local
-      path: /nonexistent/path
-`
-	ts.writeClewfile(t, clewfile)
-
-	cfg, err := config.Load(ts.clewfile)
-	if err != nil {
-		t.Fatalf("failed to load clewfile: %v", err)
-	}
-
-	// Verify we have local sources
-	if len(cfg.Sources) != 1 {
-		t.Fatalf("expected 1 source, got %d", len(cfg.Sources))
-	}
-	if cfg.Sources[0].Source.Type != types.SourceTypeLocal {
-		t.Errorf("source type = %s, want %s", cfg.Sources[0].Source.Type, types.SourceTypeLocal)
-	}
-}
-
-// TestIntegration_FilterDiffByGitStatus tests the git status filtering.
 func TestIntegration_FilterDiffByGitStatus(t *testing.T) {
 	// Create a diff result
 	diffResult := &diff.Result{

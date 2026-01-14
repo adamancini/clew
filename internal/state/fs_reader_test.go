@@ -24,14 +24,6 @@ func TestFilesystemReaderMarketplaces(t *testing.T) {
     },
     "installLocation": "/path/to/marketplace",
     "lastUpdated": "2025-01-01T00:00:00Z"
-  },
-  "local-marketplace": {
-    "source": {
-      "source": "local",
-      "path": "/local/path"
-    },
-    "installLocation": "/local/path",
-    "lastUpdated": "2025-01-01T00:00:00Z"
   }
 }`
 	if err := os.WriteFile(filepath.Join(pluginsDir, "known_marketplaces.json"), []byte(marketplacesJSON), 0644); err != nil {
@@ -44,8 +36,8 @@ func TestFilesystemReaderMarketplaces(t *testing.T) {
 		t.Fatalf("Read() error = %v", err)
 	}
 
-	if len(state.Sources) != 2 {
-		t.Errorf("Sources count = %d, want 2", len(state.Sources))
+	if len(state.Sources) != 1 {
+		t.Errorf("Sources count = %d, want 1", len(state.Sources))
 	}
 
 	if src, ok := state.Sources["test-marketplace"]; ok {
@@ -60,17 +52,6 @@ func TestFilesystemReaderMarketplaces(t *testing.T) {
 		}
 	} else {
 		t.Error("Missing test-marketplace")
-	}
-
-	if src, ok := state.Sources["local-marketplace"]; ok {
-		if src.Type != "local" {
-			t.Errorf("Source type = %s, want local", src.Type)
-		}
-		if src.Path != "/local/path" {
-			t.Errorf("Source path = %s, want /local/path", src.Path)
-		}
-	} else {
-		t.Error("Missing local-marketplace")
 	}
 }
 

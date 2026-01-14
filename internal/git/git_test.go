@@ -263,36 +263,15 @@ func TestCheckRepositoryNoRemoteTracking(t *testing.T) {
 }
 
 func TestCheckClewfile(t *testing.T) {
+	// NOTE: As of v0.7.0, CheckClewfile no longer checks git status since
+	// local sources are not supported. This test verifies it returns empty results.
 	mock := NewMockCommandRunner()
 
 	// Git is available
 	mock.AddCommand("", "git --version", []byte("git version 2.40.0"), nil)
 
-	// Local marketplace with uncommitted changes
-	marketplacePath := "/home/user/.claude/plugins/repos/local-marketplace"
-	mock.AddCommand(marketplacePath, "git rev-parse --git-dir", []byte(".git\n"), nil)
-	mock.AddCommand(marketplacePath, "git rev-parse --abbrev-ref HEAD", []byte("main\n"), nil)
-	mock.AddCommand(marketplacePath, "git status --porcelain", []byte(" M plugin.json\n"), nil)
-
-	// Local plugin that is clean
-	pluginPath := "/home/user/.claude/plugins/repos/my-plugin"
-	mock.AddCommand(pluginPath, "git rev-parse --git-dir", []byte(".git\n"), nil)
-	mock.AddCommand(pluginPath, "git rev-parse --abbrev-ref HEAD", []byte("main\n"), nil)
-	mock.AddCommand(pluginPath, "git status --porcelain", []byte(""), nil)
-	mock.AddCommand(pluginPath, "git rev-parse --abbrev-ref --symbolic-full-name @{u}", []byte("origin/main\n"), nil)
-	mock.AddCommand(pluginPath, "git fetch --quiet", []byte(""), nil)
-	mock.AddCommand(pluginPath, "git rev-list --left-right --count HEAD...origin/main", []byte("0\t0\n"), nil)
-
 	clewfile := &config.Clewfile{
 		Sources: []config.Source{
-			{
-				Name: "local-marketplace",
-				Kind: config.SourceKindLocal,
-				Source: config.SourceConfig{
-					Type: config.SourceTypeLocal,
-					Path: marketplacePath,
-				},
-			},
 			{
 				Name: "github-marketplace",
 				Kind: config.SourceKindMarketplace,
@@ -304,39 +283,28 @@ func TestCheckClewfile(t *testing.T) {
 		},
 		Plugins: []config.Plugin{
 			{
-				Name: "my-plugin@local-marketplace",
-				Source: &config.SourceConfig{
-					Type: config.SourceTypeLocal,
-					Path: pluginPath,
-				},
-			},
-			{
-				Name: "other-plugin@github-marketplace",
+				Name: "plugin@github-marketplace",
 			},
 		},
 	}
 
 	checker := NewCheckerWithRunner(mock)
-	checker.SetSkipPathCheck(true) // Skip path existence checks for testing
 	result := checker.CheckClewfile(clewfile)
 
-	// Should have warning for source with uncommitted changes
-	if !result.ShouldSkipSource("local-marketplace") {
-		t.Error("Expected local-marketplace to be skipped")
+	// Should have no warnings (no local sources to check)
+	if len(result.Warnings) != 0 {
+		t.Errorf("Expected 0 warnings, got %d: %v", len(result.Warnings), result.Warnings)
 	}
 
-	// Should not skip plugin (it's clean)
-	if result.ShouldSkipPlugin("my-plugin@local-marketplace") {
-		t.Error("Expected my-plugin to NOT be skipped")
-	}
-
-	// Should have 1 warning
-	if len(result.Warnings) != 1 {
-		t.Errorf("Expected 1 warning, got %d: %v", len(result.Warnings), result.Warnings)
+	// Should have no skips
+	if result.ShouldSkipSource("github-marketplace") {
+		t.Error("Should not skip github marketplace")
 	}
 }
 
 func TestCheckClewfileGitNotAvailable(t *testing.T) {
+	// NOTE: As of v0.7.0, CheckClewfile no longer checks git status.
+	// This test verifies graceful handling when git is unavailable.
 	mock := NewMockCommandRunner()
 
 	// Git is NOT available
@@ -345,11 +313,11 @@ func TestCheckClewfileGitNotAvailable(t *testing.T) {
 	clewfile := &config.Clewfile{
 		Sources: []config.Source{
 			{
-				Name: "local-marketplace",
-				Kind: config.SourceKindLocal,
+				Name: "github-marketplace",
+				Kind: config.SourceKindMarketplace,
 				Source: config.SourceConfig{
-					Type: config.SourceTypeLocal,
-					Path: "/tmp/marketplace",
+					Type: config.SourceTypeGitHub,
+					URL:  "anthropics/claude-plugins-official",
 				},
 			},
 		},
