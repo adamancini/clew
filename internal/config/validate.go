@@ -20,6 +20,8 @@ package config
 import (
 	"fmt"
 	"strings"
+
+	"github.com/adamancini/clew/internal/types"
 )
 
 // ValidationError represents a Clewfile validation error.
@@ -79,23 +81,11 @@ func validateSources(sources []Source) error {
 			}
 		}
 
-		// Validate kind
-		validKinds := []SourceKind{
-			SourceKindMarketplace,
-			SourceKindPlugin,
-			SourceKindLocal,
-		}
-		kindValid := false
-		for _, k := range validKinds {
-			if s.Kind == k {
-				kindValid = true
-				break
-			}
-		}
-		if !kindValid {
+		// Validate kind using the type's Validate method
+		if err := s.Kind.Validate(); err != nil {
 			return ValidationError{
 				Field:   fmt.Sprintf("sources[%d].kind", i),
-				Message: fmt.Sprintf("invalid kind '%s' (must be marketplace, plugin, or local)", s.Kind),
+				Message: err.Error(),
 			}
 		}
 
@@ -109,19 +99,11 @@ func validateSources(sources []Source) error {
 		}
 		aliases[alias] = true
 
-		// Validate source config based on kind
-		if s.Source.Type == "" {
+		// Validate source type using the type's Validate method
+		if err := s.Source.Type.Validate(); err != nil {
 			return ValidationError{
 				Field:   fmt.Sprintf("sources[%d].source.type", i),
-				Message: "source type is required (github or local)",
-			}
-		}
-
-		// Validate source type is valid
-		if s.Source.Type != SourceTypeGitHub && s.Source.Type != SourceTypeLocal {
-			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].source.type", i),
-				Message: fmt.Sprintf("invalid source type '%s' (must be github or local)", s.Source.Type),
+				Message: err.Error(),
 			}
 		}
 
@@ -197,29 +179,22 @@ func validatePlugin(index int, p Plugin) error {
 
 	// Validate inline source if present
 	if p.Source != nil {
-		if p.Source.Type == "" {
+		// Validate source type using the type's Validate method
+		if err := p.Source.Type.Validate(); err != nil {
 			return ValidationError{
 				Field:   fmt.Sprintf("plugins[%d].source", index),
-				Message: "source type is required (github or local)",
+				Message: err.Error(),
 			}
 		}
 
-		// Validate source type is valid
-		if p.Source.Type != SourceTypeGitHub && p.Source.Type != SourceTypeLocal {
-			return ValidationError{
-				Field:   fmt.Sprintf("plugins[%d].source", index),
-				Message: fmt.Sprintf("invalid source type '%s' (must be github or local)", p.Source.Type),
-			}
-		}
-
-		if p.Source.Type == SourceTypeGitHub && p.Source.URL == "" {
+		if p.Source.Type.IsGitHub() && p.Source.URL == "" {
 			return ValidationError{
 				Field:   fmt.Sprintf("plugins[%d].source.url", index),
 				Message: "github source requires url",
 			}
 		}
 
-		if p.Source.Type == SourceTypeLocal && p.Source.Path == "" {
+		if p.Source.Type.IsLocal() && p.Source.Path == "" {
 			return ValidationError{
 				Field:   fmt.Sprintf("plugins[%d].path", index),
 				Message: "local source requires path",
@@ -227,11 +202,11 @@ func validatePlugin(index int, p Plugin) error {
 		}
 	}
 
-	// Validate scope
-	if p.Scope != "" && p.Scope != "user" && p.Scope != "project" {
+	// Validate scope using the type's Validate method
+	if err := types.Scope(p.Scope).Validate(); err != nil {
 		return ValidationError{
 			Field:   fmt.Sprintf("plugins[%d].scope", index),
-			Message: fmt.Sprintf("invalid scope '%s' (must be user or project)", p.Scope),
+			Message: err.Error(),
 		}
 	}
 
@@ -239,39 +214,35 @@ func validatePlugin(index int, p Plugin) error {
 }
 
 func validateMCPServer(name string, s MCPServer) error {
-	if s.Transport == "" {
+	// Validate transport using the type's Validate method
+	transport := types.TransportType(s.Transport)
+	if err := transport.Validate(); err != nil {
 		return ValidationError{
 			Field:   fmt.Sprintf("mcp_servers.%s.transport", name),
-			Message: "transport is required (stdio or http)",
+			Message: err.Error(),
 		}
 	}
 
-	switch s.Transport {
-	case "stdio":
-		if s.Command == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("mcp_servers.%s.command", name),
-				Message: "command is required for stdio transport",
-			}
-		}
-	case "http", "sse":
-		if s.URL == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("mcp_servers.%s.url", name),
-				Message: "url is required for http/sse transport",
-			}
-		}
-	default:
+	// Validate transport-specific requirements using helper methods
+	if transport.RequiresCommand() && s.Command == "" {
 		return ValidationError{
-			Field:   fmt.Sprintf("mcp_servers.%s.transport", name),
-			Message: fmt.Sprintf("invalid transport '%s' (must be stdio, http, or sse)", s.Transport),
+			Field:   fmt.Sprintf("mcp_servers.%s.command", name),
+			Message: "command is required for stdio transport",
 		}
 	}
 
-	if s.Scope != "" && s.Scope != "user" && s.Scope != "project" {
+	if transport.RequiresURL() && s.URL == "" {
+		return ValidationError{
+			Field:   fmt.Sprintf("mcp_servers.%s.url", name),
+			Message: "url is required for http/sse transport",
+		}
+	}
+
+	// Validate scope using the type's Validate method
+	if err := types.Scope(s.Scope).Validate(); err != nil {
 		return ValidationError{
 			Field:   fmt.Sprintf("mcp_servers.%s.scope", name),
-			Message: fmt.Sprintf("invalid scope '%s' (must be user or project)", s.Scope),
+			Message: err.Error(),
 		}
 	}
 

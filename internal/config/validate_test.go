@@ -233,7 +233,7 @@ func TestValidateMCPServer(t *testing.T) {
 			name:        "missing transport",
 			server:      MCPServer{},
 			wantErr:     true,
-			errContains: "transport is required",
+			errContains: "transport type is required",
 		},
 		{
 			name:        "stdio missing command",
