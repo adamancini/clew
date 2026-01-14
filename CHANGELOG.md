@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-01-13
+
+### Changed
+- Refactored codebase with new `internal/types` package for type-safe constants
+- Improved validation using type methods instead of manual string comparisons
+- Extracted SyncService for better separation of concerns and testability
+- Reduced code complexity (sync.go: 237 → 91 lines, validate.go: ~60 lines removed)
+
+### Added
+- Type-safe constants with validation methods (SourceType, SourceKind, Scope, TransportType)
+- Helper methods on types (IsGitHub(), RequiresCommand(), etc.)
+- Comprehensive tests for SyncService (sync_service_test.go, sync_integration_test.go)
+- Dependency injection support for better testing
+
 ## [0.6.0] - 2026-01-09
 
 ### Added
