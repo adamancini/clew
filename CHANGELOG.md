@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-14
+
+### ⚠️ BREAKING CHANGES
+
+- **Removed local plugin support**: The `source: local` type is no longer supported for plugins or marketplaces
+  - Local plugin repositories (`~/.claude/plugins/repos/`) are no longer synced
+  - Only GitHub sources (`source: github`) are supported
+  - **Rationale**: Local plugins created version sync issues when plugin.json was bumped, breaking installations
+  - **Migration**: Develop plugins in normal project directories (e.g., `~/projects/my-plugin/`), push to GitHub, and install via Clewfile with GitHub URL
+
+### Removed
+
+- `SourceTypeLocal` constant and validation
+- `SourceKindLocal` constant and validation
+- Local plugin installation logic from sync executor
+- Local plugin reading from filesystem reader
+- Local source examples from schema and documentation
+
+### Changed
+
+- `SourceType` now only supports `github` (was: `github` and `local`)
+- `SourceKind` now only supports `marketplace` and `plugin` (was: `marketplace`, `plugin`, and `local`)
+- Validation now rejects any `source.type` other than `github`
+- Schema updated to remove `local` from allowed enum values
+
+## [0.6.1] - 2026-01-13
+
+### Changed
+- Refactored codebase with new `internal/types` package for type-safe constants
+- Improved validation using type methods instead of manual string comparisons
+- Extracted SyncService for better separation of concerns and testability
+- Reduced code complexity (sync.go: 237 → 91 lines, validate.go: ~60 lines removed)
+
+### Added
+- Type-safe constants with validation methods (SourceType, SourceKind, Scope, TransportType)
+- Helper methods on types (IsGitHub(), RequiresCommand(), etc.)
+- Comprehensive tests for SyncService (sync_service_test.go, sync_integration_test.go)
+- Dependency injection support for better testing
+
 ## [0.6.0] - 2026-01-09
 
 ### Added

@@ -24,7 +24,9 @@ func captureStdout(t *testing.T, f func()) string {
 
 	f()
 
-	w.Close()
+	if err := w.Close(); err != nil {
+		t.Fatalf("failed to close pipe: %v", err)
+	}
 	os.Stdout = old
 
 	var buf bytes.Buffer

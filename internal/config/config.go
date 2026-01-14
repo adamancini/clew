@@ -6,23 +6,45 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/adamancini/clew/internal/types"
 )
 
-// SourceKind represents the type of source.
-type SourceKind string
-
-const (
-	SourceKindMarketplace SourceKind = "marketplace"
-	SourceKindPlugin      SourceKind = "plugin"
-	SourceKindLocal       SourceKind = "local"
+// Type aliases for backward compatibility.
+// These types are now defined in internal/types and re-exported here.
+type (
+	// SourceKind represents the type of source.
+	SourceKind = types.SourceKind
+	// SourceType represents how a source is accessed.
+	SourceType = types.SourceType
+	// Scope represents the installation scope.
+	Scope = types.Scope
+	// TransportType represents the MCP server transport protocol.
+	TransportType = types.TransportType
 )
 
-// SourceType represents how a source is accessed.
-type SourceType string
-
+// Source kind constants - re-exported from types package.
 const (
-	SourceTypeGitHub SourceType = "github"
-	SourceTypeLocal  SourceType = "local"
+	SourceKindMarketplace = types.SourceKindMarketplace
+	SourceKindPlugin      = types.SourceKindPlugin
+)
+
+// Source type constants - re-exported from types package.
+const (
+	SourceTypeGitHub = types.SourceTypeGitHub
+)
+
+// Scope constants - re-exported from types package.
+const (
+	ScopeUser    = types.ScopeUser
+	ScopeProject = types.ScopeProject
+)
+
+// Transport type constants - re-exported from types package.
+const (
+	TransportStdio = types.TransportStdio
+	TransportHTTP  = types.TransportHTTP
+	TransportSSE   = types.TransportSSE
 )
 
 // SourceConfig defines where a source comes from.

@@ -37,18 +37,6 @@ func TestValidateSources(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid local source",
-			sources: []Source{{
-				Name: "local-plugin",
-				Kind: SourceKindLocal,
-				Source: SourceConfig{
-					Type: SourceTypeLocal,
-					Path: "/path/to/plugin",
-				},
-			}},
-			wantErr: false,
-		},
-		{
 			name: "duplicate aliases",
 			sources: []Source{
 				{Name: "source1", Alias: "same", Kind: SourceKindPlugin, Source: SourceConfig{Type: SourceTypeGitHub, URL: "a/b"}},
@@ -56,19 +44,6 @@ func TestValidateSources(t *testing.T) {
 			},
 			wantErr:     true,
 			errContains: "duplicate alias",
-		},
-		{
-			name: "local kind with non-local type",
-			sources: []Source{{
-				Name: "bad",
-				Kind: SourceKindLocal,
-				Source: SourceConfig{
-					Type: SourceTypeGitHub,
-					URL:  "org/repo",
-				},
-			}},
-			wantErr:     true,
-			errContains: "kind 'local' requires source.type 'local'",
 		},
 		{
 			name: "marketplace kind with missing URL",
@@ -115,17 +90,6 @@ func TestValidatePlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "valid inline local source",
-			plugin: Plugin{
-				Name: "my-plugin",
-				Source: &SourceConfig{
-					Type: SourceTypeLocal,
-					Path: "/path/to/plugin",
-				},
-			},
-			wantErr: false,
-		},
-		{
 			name: "valid inline github source",
 			plugin: Plugin{
 				Name: "my-plugin",
@@ -168,17 +132,6 @@ func TestValidatePlugin(t *testing.T) {
 			},
 			wantErr:     true,
 			errContains: "github source requires url",
-		},
-		{
-			name: "inline local source missing path",
-			plugin: Plugin{
-				Name: "test",
-				Source: &SourceConfig{
-					Type: SourceTypeLocal,
-				},
-			},
-			wantErr:     true,
-			errContains: "local source requires path",
 		},
 		{
 			name: "invalid source type",
@@ -233,7 +186,7 @@ func TestValidateMCPServer(t *testing.T) {
 			name:        "missing transport",
 			server:      MCPServer{},
 			wantErr:     true,
-			errContains: "transport is required",
+			errContains: "transport type is required",
 		},
 		{
 			name:        "stdio missing command",

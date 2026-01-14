@@ -231,6 +231,7 @@ func TestSummary(t *testing.T) {
 }
 
 func TestPluginDiffIsLocal(t *testing.T) {
+	// NOTE: As of v0.7.0, IsLocal() always returns false since local plugins are no longer supported
 	tests := []struct {
 		name     string
 		diff     PluginDiff
@@ -261,32 +262,7 @@ func TestPluginDiffIsLocal(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "local plugin (inline source)",
-			diff: PluginDiff{
-				Name: "my-local-plugin",
-				Desired: &config.Plugin{
-					Name: "my-local-plugin",
-					Source: &config.SourceConfig{
-						Type: config.SourceTypeLocal,
-						Path: "~/.claude/plugins/repos/my-local-plugin",
-					},
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "local plugin (from current state)",
-			diff: PluginDiff{
-				Name: "existing-local",
-				Current: &state.PluginState{
-					Name:    "existing-local",
-					IsLocal: true,
-				},
-			},
-			expected: true,
-		},
-		{
-			name: "marketplace plugin (from current state)",
+			name: "plugin from current state",
 			diff: PluginDiff{
 				Name: "existing-marketplace",
 				Current: &state.PluginState{
@@ -296,24 +272,6 @@ func TestPluginDiffIsLocal(t *testing.T) {
 				},
 			},
 			expected: false,
-		},
-		{
-			name: "local plugin (desired takes precedence)",
-			diff: PluginDiff{
-				Name: "plugin",
-				Desired: &config.Plugin{
-					Name: "plugin",
-					Source: &config.SourceConfig{
-						Type: config.SourceTypeLocal,
-						Path: "/path/to/plugin",
-					},
-				},
-				Current: &state.PluginState{
-					Name:    "plugin",
-					IsLocal: false, // Should be ignored, desired takes precedence
-				},
-			},
-			expected: true,
 		},
 	}
 

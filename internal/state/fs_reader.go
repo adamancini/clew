@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/adamancini/clew/internal/types"
 )
 
 // fsMarketplaceEntry represents a single marketplace in known_marketplaces.json.
@@ -131,19 +133,14 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 	for name, m := range marketplaces {
 		source := SourceState{
 			Name:            name,
-			Kind:            "marketplace", // All items in known_marketplaces.json are marketplace kind
-			Type:            m.Source.Source, // github or local
+			Kind:            types.SourceKindMarketplace.String(), // All items in known_marketplaces.json are marketplace kind
+			Type:            m.Source.Source,                      // github or local
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
 
-		// Set URL or Path based on type
-		switch m.Source.Source {
-		case "github":
-			source.URL = m.Source.Repo
-		case "local":
-			source.Path = m.Source.Path
-		}
+		// Set URL (only github sources are supported)
+		source.URL = m.Source.Repo
 
 		state.Sources[name] = source
 	}
@@ -152,36 +149,8 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 }
 
 func (r *FilesystemReader) readPluginRepos(claudeDir string, state *State) error {
-	reposDir := filepath.Join(claudeDir, "plugins", "repos")
-
-	entries, err := os.ReadDir(reposDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // No repos directory is okay
-		}
-		return err
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		name := entry.Name()
-		repoPath := filepath.Join(reposDir, name)
-
-		// All repos in ~/.claude/plugins/repos/ are local plugin-kind sources
-		source := SourceState{
-			Name:            name,
-			Kind:            "plugin",
-			Type:            "local",
-			Path:            repoPath,
-			InstallLocation: repoPath,
-		}
-
-		state.Sources[name] = source
-	}
-
+	// Local plugin repositories are no longer supported (removed in v0.7.0)
+	// This function is kept for backwards compatibility but does not read local plugins.
 	return nil
 }
 
@@ -289,7 +258,7 @@ func (r *FilesystemReader) readMCPServers(homeDir string, state *State) error {
 			Command:   server.Command,
 			Args:      server.Args,
 			URL:       server.URL,
-			Scope:     "user",
+			Scope:     types.ScopeUser.String(),
 		}
 	}
 

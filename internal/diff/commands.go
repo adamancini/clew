@@ -3,6 +3,8 @@ package diff
 import (
 	"fmt"
 	"strings"
+
+	"github.com/adamancini/clew/internal/types"
 )
 
 // Command represents a CLI command to reconcile state.
@@ -21,23 +23,16 @@ func (r *Result) GenerateCommands() []Command {
 		if s.Action == ActionAdd && s.Desired != nil {
 			// Only add marketplace-kind sources via CLI
 			// Plugin-kind and local-kind sources are for information only
-			if s.Desired.Kind != "marketplace" {
+			if !s.Desired.Kind.IsMarketplace() {
 				continue
 			}
 
-			var cmd string
-			switch s.Desired.Source.Type {
-			case "github":
-				cmd = fmt.Sprintf("claude plugin marketplace add %s %s", s.Name, s.Desired.Source.URL)
-			case "local":
-				cmd = fmt.Sprintf("claude plugin marketplace add %s %s", s.Name, s.Desired.Source.Path)
-			}
-			if cmd != "" {
-				commands = append(commands, Command{
-					Command:     cmd,
-					Description: fmt.Sprintf("Add source: %s", s.Name),
-				})
-			}
+			// Only github sources are supported
+			cmd := fmt.Sprintf("claude plugin marketplace add %s %s", s.Name, s.Desired.Source.URL)
+			commands = append(commands, Command{
+				Command:     cmd,
+				Description: fmt.Sprintf("Add source: %s", s.Name),
+			})
 		}
 	}
 
@@ -46,19 +41,12 @@ func (r *Result) GenerateCommands() []Command {
 		switch p.Action {
 		case ActionAdd:
 			if p.Desired != nil {
-				var cmd string
-				var desc string
-				if p.IsLocal() {
-					// Local plugins are installed by editing installed_plugins.json directly
-					cmd = fmt.Sprintf("# Edit ~/.claude/plugins/installed_plugins.json to add %s", p.Name)
-					desc = fmt.Sprintf("Install local plugin: %s (from %s)", p.Name, p.Desired.Source.Path)
-				} else {
-					cmd = fmt.Sprintf("claude plugin install %s", p.Name)
-					if p.Desired.Scope != "" && p.Desired.Scope != "user" {
-						cmd += fmt.Sprintf(" --scope %s", p.Desired.Scope)
-					}
-					desc = fmt.Sprintf("Install plugin: %s", p.Name)
+				// All plugins are installed from github sources
+				cmd := fmt.Sprintf("claude plugin install %s", p.Name)
+				if p.Desired.Scope != "" && p.Desired.Scope != "user" {
+					cmd += fmt.Sprintf(" --scope %s", p.Desired.Scope)
 				}
+				desc := fmt.Sprintf("Install plugin: %s", p.Name)
 				commands = append(commands, Command{
 					Command:     cmd,
 					Description: desc,
@@ -105,8 +93,10 @@ func (r *Result) GenerateCommands() []Command {
 					Description: fmt.Sprintf("MCP server %s requires OAuth setup (use /mcp in Claude)", m.Name),
 				})
 			} else if m.Desired != nil {
+				// Parse transport type for helper method access
+				transport := types.TransportType(m.Desired.Transport)
 				// stdio MCP servers can be automated
-				if m.Desired.Transport == "stdio" {
+				if transport.IsStdio() {
 					args := strings.Join(m.Desired.Args, " ")
 					cmd := fmt.Sprintf("claude mcp add %s %s %s", m.Name, m.Desired.Command, args)
 					commands = append(commands, Command{

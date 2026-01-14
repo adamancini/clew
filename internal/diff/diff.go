@@ -36,13 +36,8 @@ type PluginDiff struct {
 }
 
 // IsLocal returns true if this is a local repository plugin (not marketplace).
+// NOTE: Always returns false as of v0.7.0 - local plugins are no longer supported.
 func (p *PluginDiff) IsLocal() bool {
-	if p.Desired != nil && p.Desired.Source != nil {
-		return p.Desired.Source.Type == config.SourceTypeLocal
-	}
-	if p.Current != nil {
-		return p.Current.IsLocal
-	}
 	return false
 }
 
