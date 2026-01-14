@@ -74,19 +74,9 @@ func (s *Syncer) addSource(src diff.SourceDiff) (Operation, error) {
 		return op, nil
 	}
 
-	var source string
-	switch {
-	case src.Desired.Source.Type.IsGitHub():
-		source = src.Desired.Source.URL
-		op.Description = fmt.Sprintf("Add GitHub source: %s", source)
-	case src.Desired.Source.Type.IsLocal():
-		source = src.Desired.Source.Path
-		op.Description = fmt.Sprintf("Add local source: %s", source)
-	default:
-		op.Success = false
-		op.Error = fmt.Sprintf("unknown source type: %s", src.Desired.Source.Type)
-		return op, fmt.Errorf("unknown source type: %s", src.Desired.Source.Type)
-	}
+	// Only github sources are supported
+	source := src.Desired.Source.URL
+	op.Description = fmt.Sprintf("Add GitHub source: %s", source)
 
 	// Build command string before executing
 	op.Command = fmt.Sprintf("claude plugin marketplace add %s", source)

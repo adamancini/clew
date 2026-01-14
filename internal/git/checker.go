@@ -1,8 +1,6 @@
 package git
 
 import (
-	"fmt"
-
 	"github.com/adamancini/clew/internal/config"
 )
 
@@ -56,51 +54,9 @@ func (c *Checker) CheckClewfile(clewfile *config.Clewfile) *CheckResult {
 		return result
 	}
 
-	// Check local sources
-	for _, source := range clewfile.Sources {
-		if source.Source.Type == config.SourceTypeLocal && source.Source.Path != "" {
-			status := c.CheckRepository(source.Source.Path)
-			result.Sources[source.Name] = status
-
-			switch status.Level {
-			case LevelWarning:
-				result.Warnings = append(result.Warnings,
-					fmt.Sprintf("source %q at %s: %s (skipping)", source.Name, source.Source.Path, status.Message))
-				result.SkipSources[source.Name] = true
-			case LevelInfo:
-				result.Info = append(result.Info,
-					fmt.Sprintf("source %q at %s: %s", source.Name, source.Source.Path, status.Message))
-			case LevelError:
-				if status.Error != nil {
-					result.Info = append(result.Info,
-						fmt.Sprintf("source %q at %s: %s", source.Name, source.Source.Path, status.Message))
-				}
-			}
-		}
-	}
-
-	// Check plugins with inline local sources
-	for _, plugin := range clewfile.Plugins {
-		if plugin.Source != nil && plugin.Source.Type == config.SourceTypeLocal && plugin.Source.Path != "" {
-			status := c.CheckRepository(plugin.Source.Path)
-			result.Plugins[plugin.Name] = status
-
-			switch status.Level {
-			case LevelWarning:
-				result.Warnings = append(result.Warnings,
-					fmt.Sprintf("plugin %q at %s: %s (skipping)", plugin.Name, plugin.Source.Path, status.Message))
-				result.SkipPlugins[plugin.Name] = true
-			case LevelInfo:
-				result.Info = append(result.Info,
-					fmt.Sprintf("plugin %q at %s: %s", plugin.Name, plugin.Source.Path, status.Message))
-			case LevelError:
-				if status.Error != nil {
-					result.Info = append(result.Info,
-						fmt.Sprintf("plugin %q at %s: %s", plugin.Name, plugin.Source.Path, status.Message))
-				}
-			}
-		}
-	}
+	// Local sources are no longer supported (removed in v0.7.0)
+	// Git status checking only applies to github sources, which are
+	// not stored locally and thus don't need git status checks.
 
 	return result
 }

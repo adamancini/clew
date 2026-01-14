@@ -139,14 +139,8 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 			LastUpdated:     m.LastUpdated,
 		}
 
-		// Set URL or Path based on type
-		sourceType := types.SourceType(m.Source.Source)
-		switch {
-		case sourceType.IsGitHub():
-			source.URL = m.Source.Repo
-		case sourceType.IsLocal():
-			source.Path = m.Source.Path
-		}
+		// Set URL (only github sources are supported)
+		source.URL = m.Source.Repo
 
 		state.Sources[name] = source
 	}
@@ -155,36 +149,8 @@ func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
 }
 
 func (r *FilesystemReader) readPluginRepos(claudeDir string, state *State) error {
-	reposDir := filepath.Join(claudeDir, "plugins", "repos")
-
-	entries, err := os.ReadDir(reposDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // No repos directory is okay
-		}
-		return err
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		name := entry.Name()
-		repoPath := filepath.Join(reposDir, name)
-
-		// All repos in ~/.claude/plugins/repos/ are local plugin-kind sources
-		source := SourceState{
-			Name:            name,
-			Kind:            types.SourceKindPlugin.String(),
-			Type:            types.SourceTypeLocal.String(),
-			Path:            repoPath,
-			InstallLocation: repoPath,
-		}
-
-		state.Sources[name] = source
-	}
-
+	// Local plugin repositories are no longer supported (removed in v0.7.0)
+	// This function is kept for backwards compatibility but does not read local plugins.
 	return nil
 }
 

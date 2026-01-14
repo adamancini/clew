@@ -11,7 +11,6 @@ func TestSourceTypeValidate(t *testing.T) {
 		wantErr bool
 	}{
 		{"github valid", SourceTypeGitHub, false},
-		{"local valid", SourceTypeLocal, false},
 		{"empty invalid", "", true},
 		{"invalid value", "unknown", true},
 	}
@@ -32,7 +31,6 @@ func TestSourceTypeString(t *testing.T) {
 		want string
 	}{
 		{SourceTypeGitHub, "github"},
-		{SourceTypeLocal, "local"},
 	}
 
 	for _, tt := range tests {
@@ -48,33 +46,23 @@ func TestSourceTypeHelpers(t *testing.T) {
 	if !SourceTypeGitHub.IsGitHub() {
 		t.Error("github.IsGitHub() should be true")
 	}
-	if SourceTypeGitHub.IsLocal() {
-		t.Error("github.IsLocal() should be false")
-	}
-	if !SourceTypeLocal.IsLocal() {
-		t.Error("local.IsLocal() should be true")
-	}
-	if SourceTypeLocal.IsGitHub() {
-		t.Error("local.IsGitHub() should be false")
-	}
 }
 
 func TestParseSourceType(t *testing.T) {
 	tests := []struct {
+		name    string
 		input   string
 		want    SourceType
 		wantErr bool
 	}{
-		{"github", SourceTypeGitHub, false},
-		{"GITHUB", SourceTypeGitHub, false},
-		{"local", SourceTypeLocal, false},
-		{"LOCAL", SourceTypeLocal, false},
-		{"", "", true},
-		{"invalid", "", true},
+		{"github lowercase", "github", SourceTypeGitHub, false},
+		{"github uppercase", "GITHUB", SourceTypeGitHub, false},
+		{"empty", "", "", true},
+		{"invalid", "unknown", "", true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseSourceType(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseSourceType() error = %v, wantErr %v", err, tt.wantErr)
@@ -89,8 +77,8 @@ func TestParseSourceType(t *testing.T) {
 
 func TestAllSourceTypes(t *testing.T) {
 	types := AllSourceTypes()
-	if len(types) != 2 {
-		t.Errorf("AllSourceTypes() returned %d types, want 2", len(types))
+	if len(types) != 1 {
+		t.Errorf("AllSourceTypes() returned %d types, want 1", len(types))
 	}
 }
 
@@ -102,7 +90,6 @@ func TestSourceKindValidate(t *testing.T) {
 	}{
 		{"marketplace valid", SourceKindMarketplace, false},
 		{"plugin valid", SourceKindPlugin, false},
-		{"local valid", SourceKindLocal, false},
 		{"empty invalid", "", true},
 		{"invalid value", "unknown", true},
 	}
@@ -124,7 +111,6 @@ func TestSourceKindString(t *testing.T) {
 	}{
 		{SourceKindMarketplace, "marketplace"},
 		{SourceKindPlugin, "plugin"},
-		{SourceKindLocal, "local"},
 	}
 
 	for _, tt := range tests {
@@ -140,33 +126,28 @@ func TestSourceKindHelpers(t *testing.T) {
 	if !SourceKindMarketplace.IsMarketplace() {
 		t.Error("marketplace.IsMarketplace() should be true")
 	}
-	if SourceKindMarketplace.IsPlugin() {
-		t.Error("marketplace.IsPlugin() should be false")
-	}
 	if !SourceKindPlugin.IsPlugin() {
 		t.Error("plugin.IsPlugin() should be true")
-	}
-	if !SourceKindLocal.IsLocal() {
-		t.Error("local.IsLocal() should be true")
 	}
 }
 
 func TestParseSourceKind(t *testing.T) {
 	tests := []struct {
+		name    string
 		input   string
 		want    SourceKind
 		wantErr bool
 	}{
-		{"marketplace", SourceKindMarketplace, false},
-		{"MARKETPLACE", SourceKindMarketplace, false},
-		{"plugin", SourceKindPlugin, false},
-		{"local", SourceKindLocal, false},
-		{"", "", true},
-		{"invalid", "", true},
+		{"marketplace lowercase", "marketplace", SourceKindMarketplace, false},
+		{"marketplace uppercase", "MARKETPLACE", SourceKindMarketplace, false},
+		{"plugin lowercase", "plugin", SourceKindPlugin, false},
+		{"plugin uppercase", "PLUGIN", SourceKindPlugin, false},
+		{"empty", "", "", true},
+		{"invalid", "unknown", "", true},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseSourceKind(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseSourceKind() error = %v, wantErr %v", err, tt.wantErr)
@@ -181,8 +162,8 @@ func TestParseSourceKind(t *testing.T) {
 
 func TestAllSourceKinds(t *testing.T) {
 	kinds := AllSourceKinds()
-	if len(kinds) != 3 {
-		t.Errorf("AllSourceKinds() returned %d kinds, want 3", len(kinds))
+	if len(kinds) != 2 {
+		t.Errorf("AllSourceKinds() returned %d kinds, want 2", len(kinds))
 	}
 }
 

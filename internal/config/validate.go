@@ -107,37 +107,18 @@ func validateSources(sources []Source) error {
 			}
 		}
 
-		switch s.Kind {
-		case SourceKindLocal:
-			if s.Source.Type != SourceTypeLocal {
-				return ValidationError{
-					Field:   fmt.Sprintf("sources[%d].source.type", i),
-					Message: fmt.Sprintf("kind 'local' requires source.type 'local' (got '%s')", s.Source.Type),
-				}
+		// All source kinds (marketplace, plugin) require github source type
+		if !s.Source.Type.IsGitHub() {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].source.type", i),
+				Message: fmt.Sprintf("source type must be 'github' (got '%s')", s.Source.Type),
 			}
-			if s.Source.Path == "" {
-				return ValidationError{
-					Field:   fmt.Sprintf("sources[%d].source.path", i),
-					Message: "local source requires path",
-				}
-			}
-		case SourceKindPlugin, SourceKindMarketplace:
-			// Validate based on source type
-			switch s.Source.Type {
-			case SourceTypeGitHub:
-				if s.Source.URL == "" {
-					return ValidationError{
-						Field:   fmt.Sprintf("sources[%d].source.url", i),
-						Message: "github source requires url",
-					}
-				}
-			case SourceTypeLocal:
-				if s.Source.Path == "" {
-					return ValidationError{
-						Field:   fmt.Sprintf("sources[%d].source.path", i),
-						Message: "local source requires path",
-					}
-				}
+		}
+
+		if s.Source.URL == "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("sources[%d].source.url", i),
+				Message: "github source requires url",
 			}
 		}
 	}
@@ -187,17 +168,11 @@ func validatePlugin(index int, p Plugin) error {
 			}
 		}
 
-		if p.Source.Type.IsGitHub() && p.Source.URL == "" {
+		// Only github sources are supported
+		if p.Source.URL == "" {
 			return ValidationError{
 				Field:   fmt.Sprintf("plugins[%d].source.url", index),
 				Message: "github source requires url",
-			}
-		}
-
-		if p.Source.Type.IsLocal() && p.Source.Path == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("plugins[%d].path", index),
-				Message: "local source requires path",
 			}
 		}
 	}

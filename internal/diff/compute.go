@@ -80,12 +80,8 @@ func sourceNeedsUpdate(desired config.Source, current state.SourceState) bool {
 	if string(desired.Source.Type) != current.Type {
 		return true
 	}
-	// Check if URL changed for github source
-	if desired.Source.Type == config.SourceTypeGitHub && desired.Source.URL != current.URL {
-		return true
-	}
-	// Check if path changed for local source
-	if desired.Source.Type == config.SourceTypeLocal && desired.Source.Path != current.Path {
+	// Check if URL changed (only github sources are supported)
+	if desired.Source.URL != current.URL {
 		return true
 	}
 	// Check if ref changed

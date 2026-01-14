@@ -27,13 +27,11 @@ type (
 const (
 	SourceKindMarketplace = types.SourceKindMarketplace
 	SourceKindPlugin      = types.SourceKindPlugin
-	SourceKindLocal       = types.SourceKindLocal
 )
 
 // Source type constants - re-exported from types package.
 const (
 	SourceTypeGitHub = types.SourceTypeGitHub
-	SourceTypeLocal  = types.SourceTypeLocal
 )
 
 // Scope constants - re-exported from types package.

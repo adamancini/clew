@@ -14,30 +14,28 @@ import (
 	"strings"
 )
 
-// SourceType represents how a source is accessed (github or local).
+// SourceType represents how a source is accessed (github only).
 type SourceType string
 
 const (
 	// SourceTypeGitHub indicates a GitHub repository source.
 	SourceTypeGitHub SourceType = "github"
-	// SourceTypeLocal indicates a local filesystem path source.
-	SourceTypeLocal SourceType = "local"
 )
 
 // AllSourceTypes returns all valid source types.
 func AllSourceTypes() []SourceType {
-	return []SourceType{SourceTypeGitHub, SourceTypeLocal}
+	return []SourceType{SourceTypeGitHub}
 }
 
 // Validate checks if the SourceType is a valid value.
 func (s SourceType) Validate() error {
 	switch s {
-	case SourceTypeGitHub, SourceTypeLocal:
+	case SourceTypeGitHub:
 		return nil
 	case "":
 		return fmt.Errorf("source type is required")
 	default:
-		return fmt.Errorf("invalid source type '%s' (must be github or local)", s)
+		return fmt.Errorf("invalid source type '%s' (must be github)", s)
 	}
 }
 
@@ -51,11 +49,6 @@ func (s SourceType) IsGitHub() bool {
 	return s == SourceTypeGitHub
 }
 
-// IsLocal returns true if the source type is local.
-func (s SourceType) IsLocal() bool {
-	return s == SourceTypeLocal
-}
-
 // ParseSourceType parses a string into a SourceType.
 // Returns an error if the string is not a valid source type.
 func ParseSourceType(s string) (SourceType, error) {
@@ -66,7 +59,7 @@ func ParseSourceType(s string) (SourceType, error) {
 	return st, nil
 }
 
-// SourceKind represents the type of source (marketplace, plugin, or local).
+// SourceKind represents the type of source (marketplace or plugin).
 type SourceKind string
 
 const (
@@ -74,24 +67,22 @@ const (
 	SourceKindMarketplace SourceKind = "marketplace"
 	// SourceKindPlugin indicates a plugin repository source.
 	SourceKindPlugin SourceKind = "plugin"
-	// SourceKindLocal indicates a local plugin source.
-	SourceKindLocal SourceKind = "local"
 )
 
 // AllSourceKinds returns all valid source kinds.
 func AllSourceKinds() []SourceKind {
-	return []SourceKind{SourceKindMarketplace, SourceKindPlugin, SourceKindLocal}
+	return []SourceKind{SourceKindMarketplace, SourceKindPlugin}
 }
 
 // Validate checks if the SourceKind is a valid value.
 func (k SourceKind) Validate() error {
 	switch k {
-	case SourceKindMarketplace, SourceKindPlugin, SourceKindLocal:
+	case SourceKindMarketplace, SourceKindPlugin:
 		return nil
 	case "":
 		return fmt.Errorf("source kind is required")
 	default:
-		return fmt.Errorf("invalid source kind '%s' (must be marketplace, plugin, or local)", k)
+		return fmt.Errorf("invalid source kind '%s' (must be marketplace or plugin)", k)
 	}
 }
 
@@ -108,11 +99,6 @@ func (k SourceKind) IsMarketplace() bool {
 // IsPlugin returns true if the source kind is plugin.
 func (k SourceKind) IsPlugin() bool {
 	return k == SourceKindPlugin
-}
-
-// IsLocal returns true if the source kind is local.
-func (k SourceKind) IsLocal() bool {
-	return k == SourceKindLocal
 }
 
 // ParseSourceKind parses a string into a SourceKind.
