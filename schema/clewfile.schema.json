@@ -14,30 +14,33 @@
     },
     "marketplaces": {
       "type": "object",
-      "description": "Plugin marketplace sources",
+      "description": "Plugin marketplace repositories",
       "additionalProperties": {
         "type": "object",
-        "required": ["source"],
+        "required": ["repo"],
         "properties": {
-          "source": {
-            "type": "string",
-            "enum": ["github"],
-            "description": "Marketplace source type (only github is supported)"
-          },
           "repo": {
             "type": "string",
-            "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$",
-            "description": "GitHub repository in owner/repo format",
-            "examples": ["anthropics/claude-plugins-official", "obra/superpowers-marketplace"]
+            "minLength": 1,
+            "description": "Repository URL - short form (owner/repo), HTTPS, or SSH",
+            "examples": ["anthropics/claude-plugins-official", "https://github.com/obra/superpowers-marketplace.git", "git@github.com:owner/repo.git"]
+          },
+          "ref": {
+            "type": "string",
+            "description": "Optional git ref (branch, tag, or SHA)",
+            "examples": ["main", "v1.0.0", "abc1234"]
           }
         },
-        "required": ["repo"]
+        "additionalProperties": false
       },
       "examples": [
         {
           "claude-plugins-official": {
-            "source": "github",
             "repo": "anthropics/claude-plugins-official"
+          },
+          "superpowers-marketplace": {
+            "repo": "obra/superpowers-marketplace",
+            "ref": "main"
           }
         }
       ]
