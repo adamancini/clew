@@ -152,6 +152,7 @@ func TestFilesystemReaderMissingFiles(t *testing.T) {
 
 	if state == nil {
 		t.Fatal("State should not be nil")
+		return
 	}
 
 	if len(state.Marketplaces) != 0 {

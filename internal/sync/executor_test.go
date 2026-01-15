@@ -417,12 +417,6 @@ type MockFileEditor struct {
 	Files map[string][]byte
 }
 
-func newMockFileEditor() *MockFileEditor {
-	return &MockFileEditor{
-		Files: make(map[string][]byte),
-	}
-}
-
 func (m *MockFileEditor) ReadFile(path string) ([]byte, error) {
 	if data, ok := m.Files[path]; ok {
 		return data, nil

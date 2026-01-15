@@ -93,6 +93,7 @@ func TestSyncServiceComputeDiff(t *testing.T) {
 
 	if result == nil {
 		t.Fatal("ComputeDiff() returned nil")
+		return
 	}
 
 	if len(result.Plugins) != 1 {
@@ -190,6 +191,7 @@ func TestNewSyncService(t *testing.T) {
 
 	if service == nil {
 		t.Fatal("NewSyncService returned nil")
+		return
 	}
 	if service.configPath != "test-config" {
 		t.Errorf("configPath = %s, want test-config", service.configPath)

@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	// Cleanup
-	os.Remove(binaryName)
+	_ = os.Remove(binaryName)
 
 	os.Exit(code)
 }
@@ -77,7 +77,7 @@ func setupTestEnv(t *testing.T) (string, func()) {
 	}
 
 	cleanup := func() {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	}
 
 	return tmpDir, cleanup
@@ -612,7 +612,7 @@ func TestCLIReader(t *testing.T) {
 		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
-		defer os.Remove(clewfilePath)
+		defer func() { _ = os.Remove(clewfilePath) }()
 
 		// Test status without filesystem flag
 		stdout, stderr, err := runClew(t, "", "status")
@@ -644,7 +644,7 @@ func TestCLIReader(t *testing.T) {
 		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
-		defer os.Remove(clewfilePath)
+		defer func() { _ = os.Remove(clewfilePath) }()
 
 		// Test diff without filesystem flag
 		stdout, stderr, err := runClew(t, "", "diff")
@@ -676,7 +676,7 @@ func TestCLIReader(t *testing.T) {
 		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
-		defer os.Remove(clewfilePath)
+		defer func() { _ = os.Remove(clewfilePath) }()
 
 		// Test sync without filesystem flag (should be no-op if in sync)
 		stdout, stderr, err := runClew(t, "", "sync")
@@ -757,7 +757,7 @@ func TestCLIReaderVsFilesystemReader(t *testing.T) {
 		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
-		defer os.Remove(clewfilePath)
+		defer func() { _ = os.Remove(clewfilePath) }()
 
 		// Get status from CLI reader
 		cliOutput, stderr, err := runClew(t, "", "status", "--output", "json")

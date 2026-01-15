@@ -277,6 +277,7 @@ func TestPromptForSelectionApproveAll(t *testing.T) {
 
 	if selection == nil {
 		t.Fatal("expected non-nil selection")
+		return
 	}
 	if !proceed {
 		t.Error("expected proceed=true")
@@ -319,6 +320,7 @@ func TestPromptForSelectionPartialApproval(t *testing.T) {
 
 	if selection == nil {
 		t.Fatal("expected non-nil selection")
+		return
 	}
 	if !proceed {
 		t.Error("expected proceed=true")
