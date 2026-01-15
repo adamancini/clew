@@ -21,9 +21,9 @@ func (r *Result) GenerateCommands() []Command {
 	// 1. Add sources first (plugins depend on them)
 	for _, s := range r.Sources {
 		if s.Action == ActionAdd && s.Desired != nil {
-			// Only add marketplace-kind sources via CLI
-			// Plugin-kind and local-kind sources are for information only
-			if !s.Desired.Kind.IsMarketplace() {
+			// Both marketplace and plugin kinds can be added via CLI
+			// (both are GitHub repos, just different structure)
+			if !s.Desired.Kind.IsMarketplace() && !s.Desired.Kind.IsPlugin() {
 				continue
 			}
 
