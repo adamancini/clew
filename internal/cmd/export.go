@@ -97,7 +97,8 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		MCPServers:   make(map[string]ExportedMCPServer),
 	}
 
-	// Convert marketplaces
+	// Convert marketplaces and track valid marketplace names
+	validMarketplaces := make(map[string]bool)
 	for alias, m := range s.Marketplaces {
 		em := ExportedMarketplace{
 			Repo: m.Repo,
@@ -106,10 +107,21 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 			em.Ref = m.Ref
 		}
 		exported.Marketplaces[alias] = em
+		validMarketplaces[alias] = true
 	}
 
-	// Convert plugins
+	// Convert plugins, skipping those that reference non-existent marketplaces
+	var skippedPlugins []string
 	for fullName, p := range s.Plugins {
+		// Parse plugin@marketplace format and check if marketplace exists
+		if parts := strings.SplitN(fullName, "@", 2); len(parts) == 2 {
+			marketplace := parts[1]
+			if !validMarketplaces[marketplace] {
+				skippedPlugins = append(skippedPlugins, fullName)
+				continue // Skip this plugin - marketplace not in exported state
+			}
+		}
+
 		ep := ExportedPlugin{
 			Name: fullName,
 		}
@@ -123,6 +135,13 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 			ep.Scope = p.Scope
 		}
 		exported.Plugins = append(exported.Plugins, ep)
+	}
+
+	// Log skipped plugins to stderr
+	if len(skippedPlugins) > 0 {
+		sort.Strings(skippedPlugins) // Sort for consistent output
+		fmt.Fprintf(os.Stderr, "Note: Skipped %d plugin(s) referencing non-marketplace sources: %v\n",
+			len(skippedPlugins), skippedPlugins)
 	}
 
 	// Sort plugins by marketplace name, then by plugin name for readability
