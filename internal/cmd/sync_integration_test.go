@@ -106,39 +106,33 @@ func (ts *testSetup) writeSettings(t *testing.T, settings map[string]interface{}
 // TestIntegration_LoadConfiguration tests loading and validating Clewfiles.
 func TestIntegration_LoadConfiguration(t *testing.T) {
 	tests := []struct {
-		name        string
-		clewfile    string
-		wantErr     bool
-		wantSources int
-		wantPlugins int
-		wantMCP     int
+		name             string
+		clewfile         string
+		wantErr          bool
+		wantMarketplaces int
+		wantPlugins      int
+		wantMCP          int
 	}{
 		{
 			name: "valid minimal clewfile",
 			clewfile: `version: 1
-sources:
-  - name: official
-    kind: marketplace
-    source:
-      type: github
-      url: anthropics/plugins
+marketplaces:
+  official:
+    repo: anthropics/plugins
 plugins:
   - test-plugin@official
 `,
-			wantErr:     false,
-			wantSources: 1,
-			wantPlugins: 1,
-			wantMCP:     0,
+			wantErr:          false,
+			wantMarketplaces: 1,
+			wantPlugins:      1,
+			wantMCP:          0,
 		},
 		{
 			name: "valid full clewfile",
 			clewfile: `version: 1
-sources:
-  - name: official
-    kind: marketplace
-    source:
-      type: github
-      url: anthropics/plugins
+marketplaces:
+  official:
+    repo: anthropics/plugins
 plugins:
   - test-plugin@official
   - name: another-plugin@official
@@ -149,22 +143,10 @@ mcp_servers:
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
 `,
-			wantErr:     false,
-			wantSources: 1,
-			wantPlugins: 2,
-			wantMCP:     1,
-		},
-		{
-			name: "invalid source kind",
-			clewfile: `version: 1
-sources:
-  - name: bad
-    kind: invalid
-    source:
-      type: github
-      url: org/repo
-`,
-			wantErr: true,
+			wantErr:          false,
+			wantMarketplaces: 1,
+			wantPlugins:      2,
+			wantMCP:          1,
 		},
 		{
 			name: "invalid transport",
@@ -197,8 +179,8 @@ mcp_servers:
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if len(clewfile.Sources) != tt.wantSources {
-				t.Errorf("sources count = %d, want %d", len(clewfile.Sources), tt.wantSources)
+			if len(clewfile.Marketplaces) != tt.wantMarketplaces {
+				t.Errorf("marketplaces count = %d, want %d", len(clewfile.Marketplaces), tt.wantMarketplaces)
 			}
 			if len(clewfile.Plugins) != tt.wantPlugins {
 				t.Errorf("plugins count = %d, want %d", len(clewfile.Plugins), tt.wantPlugins)
@@ -251,16 +233,16 @@ func TestIntegration_ReadCurrentState(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// Verify sources
-	if len(currentState.Sources) != 1 {
-		t.Errorf("sources count = %d, want 1", len(currentState.Sources))
+	// Verify marketplaces
+	if len(currentState.Marketplaces) != 1 {
+		t.Errorf("marketplaces count = %d, want 1", len(currentState.Marketplaces))
 	}
-	if src, ok := currentState.Sources["official"]; ok {
-		if src.Kind != types.SourceKindMarketplace.String() {
-			t.Errorf("source kind = %s, want %s", src.Kind, types.SourceKindMarketplace.String())
+	if m, ok := currentState.Marketplaces["official"]; ok {
+		if m.Repo != "anthropics/plugins" {
+			t.Errorf("marketplace repo = %s, want anthropics/plugins", m.Repo)
 		}
 	} else {
-		t.Error("source 'official' not found")
+		t.Error("marketplace 'official' not found")
 	}
 
 	// Verify plugins
@@ -297,9 +279,9 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 				},
 			},
 			current: &state.State{
-				Sources:    map[string]state.SourceState{},
-				Plugins:    map[string]state.PluginState{},
-				MCPServers: map[string]state.MCPServerState{},
+				Marketplaces: map[string]state.MarketplaceState{},
+				Plugins:      map[string]state.PluginState{},
+				MCPServers:   map[string]state.MCPServerState{},
 			},
 			wantAdd:       1,
 			wantUpdate:    0,
@@ -313,7 +295,7 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 				},
 			},
 			current: &state.State{
-				Sources: map[string]state.SourceState{},
+				Marketplaces: map[string]state.MarketplaceState{},
 				Plugins: map[string]state.PluginState{
 					"test-plugin@official": {
 						Name:    "test-plugin",
@@ -332,7 +314,7 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 				Plugins: []config.Plugin{},
 			},
 			current: &state.State{
-				Sources: map[string]state.SourceState{},
+				Marketplaces: map[string]state.MarketplaceState{},
 				Plugins: map[string]state.PluginState{
 					"extra-plugin@official": {
 						Name:    "extra-plugin",
@@ -353,7 +335,7 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 				},
 			},
 			current: &state.State{
-				Sources: map[string]state.SourceState{},
+				Marketplaces: map[string]state.MarketplaceState{},
 				Plugins: map[string]state.PluginState{
 					"test-plugin@official": {
 						Name:    "test-plugin",
@@ -413,29 +395,24 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		diffResult     *diff.Result
-		wantInstalled  int
-		wantUpdated    int
-		wantFailed     int
-		wantSkipped    int
-		wantAttention  int
-		wantCommands   int
+		name          string
+		diffResult    *diff.Result
+		wantInstalled int
+		wantUpdated   int
+		wantFailed    int
+		wantSkipped   int
+		wantAttention int
+		wantCommands  int
 	}{
 		{
 			name: "install marketplace and plugin",
 			diffResult: &diff.Result{
-				Sources: []diff.SourceDiff{
+				Marketplaces: []diff.MarketplaceDiff{
 					{
-						Name:   "official",
+						Alias:  "official",
 						Action: diff.ActionAdd,
-						Desired: &config.Source{
-							Name: "official",
-							Kind: types.SourceKindMarketplace,
-							Source: config.SourceConfig{
-								Type: types.SourceTypeGitHub,
-								URL:  "anthropics/plugins",
-							},
+						Desired: &config.Marketplace{
+							Repo: "anthropics/plugins",
 						},
 					},
 				},
@@ -460,7 +437,7 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 		{
 			name: "enable plugin",
 			diffResult: &diff.Result{
-				Sources: []diff.SourceDiff{},
+				Marketplaces: []diff.MarketplaceDiff{},
 				Plugins: []diff.PluginDiff{
 					{
 						Name:   "test-plugin@official",
@@ -483,8 +460,8 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 		{
 			name: "skip OAuth MCP server",
 			diffResult: &diff.Result{
-				Sources: []diff.SourceDiff{},
-				Plugins: []diff.PluginDiff{},
+				Marketplaces: []diff.MarketplaceDiff{},
+				Plugins:      []diff.PluginDiff{},
 				MCPServers: []diff.MCPServerDiff{
 					{
 						Name:          "oauth-server",
@@ -507,11 +484,11 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 		{
 			name: "report extra items",
 			diffResult: &diff.Result{
-				Sources: []diff.SourceDiff{
+				Marketplaces: []diff.MarketplaceDiff{
 					{
-						Name:    "extra-marketplace",
+						Alias:   "extra-marketplace",
 						Action:  diff.ActionRemove,
-						Current: &state.SourceState{Name: "extra-marketplace"},
+						Current: &state.MarketplaceState{Alias: "extra-marketplace"},
 					},
 				},
 				Plugins: []diff.PluginDiff{
@@ -638,13 +615,13 @@ func TestIntegration_BackupCreation(t *testing.T) {
 func TestIntegration_FilterDiffByGitStatus(t *testing.T) {
 	// Create a diff result
 	diffResult := &diff.Result{
-		Sources: []diff.SourceDiff{
+		Marketplaces: []diff.MarketplaceDiff{
 			{
-				Name:   "clean-source",
+				Alias:  "clean-marketplace",
 				Action: diff.ActionAdd,
 			},
 			{
-				Name:   "dirty-source",
+				Alias:  "dirty-marketplace",
 				Action: diff.ActionAdd,
 			},
 		},
@@ -662,14 +639,14 @@ func TestIntegration_FilterDiffByGitStatus(t *testing.T) {
 	}
 
 	// Manually mark some items as skipped due to git
-	filteredSources := make([]diff.SourceDiff, 0, len(diffResult.Sources))
-	for _, s := range diffResult.Sources {
-		if s.Name == "dirty-source" {
-			s.Action = diff.ActionSkipGit
+	filteredMarketplaces := make([]diff.MarketplaceDiff, 0, len(diffResult.Marketplaces))
+	for _, m := range diffResult.Marketplaces {
+		if m.Alias == "dirty-marketplace" {
+			m.Action = diff.ActionSkipGit
 		}
-		filteredSources = append(filteredSources, s)
+		filteredMarketplaces = append(filteredMarketplaces, m)
 	}
-	diffResult.Sources = filteredSources
+	diffResult.Marketplaces = filteredMarketplaces
 
 	filteredPlugins := make([]diff.PluginDiff, 0, len(diffResult.Plugins))
 	for _, p := range diffResult.Plugins {
@@ -683,8 +660,8 @@ func TestIntegration_FilterDiffByGitStatus(t *testing.T) {
 	// Count actions
 	addCount := 0
 	skipCount := 0
-	for _, s := range diffResult.Sources {
-		switch s.Action {
+	for _, m := range diffResult.Marketplaces {
+		switch m.Action {
 		case diff.ActionAdd:
 			addCount++
 		case diff.ActionSkipGit:
@@ -711,17 +688,12 @@ func TestIntegration_FilterDiffByGitStatus(t *testing.T) {
 // TestIntegration_GenerateCommands tests command generation.
 func TestIntegration_GenerateCommands(t *testing.T) {
 	diffResult := &diff.Result{
-		Sources: []diff.SourceDiff{
+		Marketplaces: []diff.MarketplaceDiff{
 			{
-				Name:   "official",
+				Alias:  "official",
 				Action: diff.ActionAdd,
-				Desired: &config.Source{
-					Name: "official",
-					Kind: types.SourceKindMarketplace,
-					Source: config.SourceConfig{
-						Type: types.SourceTypeGitHub,
-						URL:  "anthropics/plugins",
-					},
+				Desired: &config.Marketplace{
+					Repo: "anthropics/plugins",
 				},
 			},
 		},
@@ -752,7 +724,7 @@ func TestIntegration_GenerateCommands(t *testing.T) {
 		t.Errorf("commands count = %d, want 3", len(commands))
 	}
 
-	// Verify command order: sources, plugins, MCP servers
+	// Verify command order: marketplaces, plugins, MCP servers
 	for i, cmd := range commands {
 		if cmd.Command == "" {
 			t.Errorf("command[%d] is empty", i)
@@ -770,12 +742,9 @@ func TestIntegration_AlreadyInSync(t *testing.T) {
 
 	// Create Clewfile
 	clewfile := `version: 1
-sources:
-  - name: official
-    kind: marketplace
-    source:
-      type: github
-      url: anthropics/plugins
+marketplaces:
+  official:
+    repo: anthropics/plugins
 plugins:
   - test-plugin@official
 `
@@ -824,7 +793,7 @@ plugins:
 	diffResult := diff.Compute(cfg, currentState)
 	add, update, remove, attention := diffResult.Summary()
 
-	// Should be in sync (no adds or updates needed, only extra sources from repos/ dir)
+	// Should be in sync (no adds or updates needed)
 	if add != 0 {
 		t.Errorf("add = %d, want 0", add)
 	}

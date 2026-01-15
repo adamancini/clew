@@ -81,24 +81,27 @@ func sniffFormat(content []byte) Format {
 // rawClewfile is an intermediate representation for parsing.
 // It handles the flexible Plugin format (string or struct).
 type rawClewfile struct {
-	Version    int                  `yaml:"version" toml:"version" json:"version"`
-	Sources    []Source             `yaml:"sources" toml:"sources" json:"sources"`
-	Plugins    []interface{}        `yaml:"plugins" toml:"plugins" json:"plugins"`
-	MCPServers map[string]MCPServer `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
+	Version      int                    `yaml:"version" toml:"version" json:"version"`
+	Marketplaces map[string]Marketplace `yaml:"marketplaces" toml:"marketplaces" json:"marketplaces"`
+	Plugins      []interface{}          `yaml:"plugins" toml:"plugins" json:"plugins"`
+	MCPServers   map[string]MCPServer   `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
 }
 
 // parsePlugins converts the flexible plugin format to Plugin structs.
+// Plugins can be specified as:
+//   - Simple string: "name@marketplace" (e.g., "context7@official")
+//   - Struct with name, enabled, and scope fields
 func parsePlugins(raw []interface{}) ([]Plugin, error) {
 	plugins := make([]Plugin, 0, len(raw))
 
 	for i, item := range raw {
 		switch v := item.(type) {
 		case string:
-			// Simple string format: "name@source" or "name"
+			// Simple string format: "name@marketplace"
 			plugins = append(plugins, Plugin{Name: v})
 
 		case map[string]interface{}:
-			// Struct format with name, enabled, scope, and optional inline source
+			// Struct format with name, enabled, scope
 			plugin := Plugin{}
 
 			if name, ok := v["name"].(string); ok {
@@ -113,42 +116,6 @@ func parsePlugins(raw []interface{}) ([]Plugin, error) {
 
 			if scope, ok := v["scope"].(string); ok {
 				plugin.Scope = scope
-			}
-
-			// Handle inline source - supports two formats:
-			// 1. Simple format: source: "local" with path at top level
-			// 2. Nested format: source: { type: "local", path: "..." }
-			if sourceStr, ok := v["source"].(string); ok {
-				// Simple format: source is a string (e.g., "local")
-				sourceConfig := &SourceConfig{
-					Type: SourceType(sourceStr),
-				}
-				// For "local" source, path should be at top level
-				if path, ok := v["path"].(string); ok {
-					sourceConfig.Path = path
-				}
-				plugin.Source = sourceConfig
-			} else if sourceData, ok := v["source"].(map[string]interface{}); ok {
-				// Nested format: source is an object
-				sourceConfig := &SourceConfig{}
-
-				if typeStr, ok := sourceData["type"].(string); ok {
-					sourceConfig.Type = SourceType(typeStr)
-				}
-
-				if url, ok := sourceData["url"].(string); ok {
-					sourceConfig.URL = url
-				}
-
-				if ref, ok := sourceData["ref"].(string); ok {
-					sourceConfig.Ref = ref
-				}
-
-				if path, ok := sourceData["path"].(string); ok {
-					sourceConfig.Path = path
-				}
-
-				plugin.Source = sourceConfig
 			}
 
 			plugins = append(plugins, plugin)
@@ -217,15 +184,15 @@ func parse(content []byte, format Format) (*Clewfile, error) {
 	}
 
 	clewfile := &Clewfile{
-		Version:    raw.Version,
-		Sources:    raw.Sources,
-		Plugins:    plugins,
-		MCPServers: raw.MCPServers,
+		Version:      raw.Version,
+		Marketplaces: raw.Marketplaces,
+		Plugins:      plugins,
+		MCPServers:   raw.MCPServers,
 	}
 
-	// Initialize nil maps and slices
-	if clewfile.Sources == nil {
-		clewfile.Sources = []Source{}
+	// Initialize nil maps
+	if clewfile.Marketplaces == nil {
+		clewfile.Marketplaces = make(map[string]Marketplace)
 	}
 	if clewfile.MCPServers == nil {
 		clewfile.MCPServers = make(map[string]MCPServer)

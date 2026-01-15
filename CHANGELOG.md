@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-15
+
+### Breaking Changes
+
+This release introduces a major schema change from `sources` array to `marketplaces` map format.
+
+**Why this change?**
+- Simplified configuration with direct name-to-config mapping
+- Removed redundant indirection (`source.type`, `source.url` -> `url`)
+- Eliminated unused fields (`kind`, `alias`, `ref`, `path`)
+- Cleaner plugin references (`plugin@marketplace` works directly with map keys)
+
+### Migration Guide
+
+**Before (v0.7.x):**
+```yaml
+sources:
+  - name: anthropics-marketplace
+    alias: anthropics
+    kind: marketplace
+    source:
+      type: github
+      url: github.com/anthropics/claude-code-plugins
+
+plugins:
+  - plugin-dev@anthropics
+```
+
+**After (v0.8.0):**
+```yaml
+marketplaces:
+  anthropics:
+    url: github.com/anthropics/claude-code-plugins
+
+plugins:
+  - plugin-dev@anthropics
+```
+
+### Removed
+
+- `SourceKind` type and constants (`marketplace`, `plugin`)
+- `SourceType` type and constants (`github`)
+- `Source.Kind` field - marketplaces map implies kind
+- `Source.Type` field - only GitHub supported, now implicit
+- `Source.Alias` field - map key serves as the alias
+- `Source.Ref` field - unused, ref pinning not implemented
+- `Source.Path` field - unused, subpath support not implemented
+- `Source.Source` nested struct - flattened to direct `URL` field
+- `validateSource()` and `validateSourceConfig()` functions
+- `internal/types/source_kind.go` and `internal/types/source_type.go`
+
+### Changed
+
+- `Clewfile.Sources` (array) replaced with `Clewfile.Marketplaces` (map)
+- `State.Sources` (array) replaced with `State.Marketplaces` (map)
+- `Marketplace` struct simplified: only `Name` and `URL` fields
+- `MarketplaceState` struct simplified: only `Name` and `URL` fields
+- Plugin `@source` references now use marketplace map keys
+- Diff computation updated for map-based marketplace comparison
+- Sync executor updated for new marketplace structure
+- Filesystem reader updated to build marketplace map from JSON files
+- Export command updated to output new format
+- All validation simplified - only URL validation needed
+
 ## [0.7.1] - 2026-01-15
 
 ### Fixed

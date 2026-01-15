@@ -6,7 +6,6 @@ import (
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/state"
-	"github.com/adamancini/clew/internal/types"
 )
 
 // TestSyncServiceIsInSync tests the IsInSync method.
@@ -19,8 +18,8 @@ func TestSyncServiceIsInSync(t *testing.T) {
 		{
 			name: "in sync - no actions needed",
 			diff: &diff.Result{
-				Sources: []diff.SourceDiff{
-					{Name: "official", Action: diff.ActionNone},
+				Marketplaces: []diff.MarketplaceDiff{
+					{Alias: "official", Action: diff.ActionNone},
 				},
 				Plugins:    []diff.PluginDiff{},
 				MCPServers: []diff.MCPServerDiff{},
@@ -30,7 +29,7 @@ func TestSyncServiceIsInSync(t *testing.T) {
 		{
 			name: "not in sync - add needed",
 			diff: &diff.Result{
-				Sources: []diff.SourceDiff{},
+				Marketplaces: []diff.MarketplaceDiff{},
 				Plugins: []diff.PluginDiff{
 					{Name: "new-plugin", Action: diff.ActionAdd},
 				},
@@ -41,7 +40,7 @@ func TestSyncServiceIsInSync(t *testing.T) {
 		{
 			name: "not in sync - update needed",
 			diff: &diff.Result{
-				Sources: []diff.SourceDiff{},
+				Marketplaces: []diff.MarketplaceDiff{},
 				Plugins: []diff.PluginDiff{
 					{Name: "plugin", Action: diff.ActionEnable},
 				},
@@ -52,8 +51,8 @@ func TestSyncServiceIsInSync(t *testing.T) {
 		{
 			name: "not in sync - attention needed",
 			diff: &diff.Result{
-				Sources: []diff.SourceDiff{
-					{Name: "extra", Action: diff.ActionRemove},
+				Marketplaces: []diff.MarketplaceDiff{
+					{Alias: "extra", Action: diff.ActionRemove},
 				},
 				Plugins:    []diff.PluginDiff{},
 				MCPServers: []diff.MCPServerDiff{},
@@ -85,15 +84,16 @@ func TestSyncServiceComputeDiff(t *testing.T) {
 	}
 
 	current := &state.State{
-		Sources:    map[string]state.SourceState{},
-		Plugins:    map[string]state.PluginState{},
-		MCPServers: map[string]state.MCPServerState{},
+		Marketplaces: map[string]state.MarketplaceState{},
+		Plugins:      map[string]state.PluginState{},
+		MCPServers:   map[string]state.MCPServerState{},
 	}
 
 	result := service.ComputeDiff(clewfile, current)
 
 	if result == nil {
 		t.Fatal("ComputeDiff() returned nil")
+		return
 	}
 
 	if len(result.Plugins) != 1 {
@@ -110,17 +110,12 @@ func TestSyncServiceGenerateCommands(t *testing.T) {
 	service := &SyncService{}
 
 	diffResult := &diff.Result{
-		Sources: []diff.SourceDiff{
+		Marketplaces: []diff.MarketplaceDiff{
 			{
-				Name:   "official",
+				Alias:  "official",
 				Action: diff.ActionAdd,
-				Desired: &config.Source{
-					Name: "official",
-					Kind: types.SourceKindMarketplace,
-					Source: config.SourceConfig{
-						Type: types.SourceTypeGitHub,
-						URL:  "anthropics/plugins",
-					},
+				Desired: &config.Marketplace{
+					Repo: "anthropics/plugins",
 				},
 			},
 		},
@@ -149,9 +144,9 @@ func TestSyncServiceFilterDiffByGitStatus(t *testing.T) {
 
 	// Test with nil git result
 	diffResult := &diff.Result{
-		Sources:    []diff.SourceDiff{{Name: "source"}},
-		Plugins:    []diff.PluginDiff{{Name: "plugin"}},
-		MCPServers: []diff.MCPServerDiff{},
+		Marketplaces: []diff.MarketplaceDiff{{Alias: "marketplace"}},
+		Plugins:      []diff.PluginDiff{{Name: "plugin"}},
+		MCPServers:   []diff.MCPServerDiff{},
 	}
 
 	filtered := service.FilterDiffByGitStatus(diffResult, nil)
@@ -196,6 +191,7 @@ func TestNewSyncService(t *testing.T) {
 
 	if service == nil {
 		t.Fatal("NewSyncService returned nil")
+		return
 	}
 	if service.configPath != "test-config" {
 		t.Errorf("configPath = %s, want test-config", service.configPath)

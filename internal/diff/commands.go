@@ -18,20 +18,13 @@ type Command struct {
 func (r *Result) GenerateCommands() []Command {
 	var commands []Command
 
-	// 1. Add sources first (plugins depend on them)
-	for _, s := range r.Sources {
-		if s.Action == ActionAdd && s.Desired != nil {
-			// Both marketplace and plugin kinds can be added via CLI
-			// (both are GitHub repos, just different structure)
-			if !s.Desired.Kind.IsMarketplace() && !s.Desired.Kind.IsPlugin() {
-				continue
-			}
-
-			// Only github sources are supported
-			cmd := fmt.Sprintf("claude plugin marketplace add %s %s", s.Name, s.Desired.Source.URL)
+	// 1. Add marketplaces first (plugins depend on them)
+	for _, m := range r.Marketplaces {
+		if m.Action == ActionAdd && m.Desired != nil {
+			cmd := fmt.Sprintf("claude plugin marketplace add %s", m.Desired.Repo)
 			commands = append(commands, Command{
 				Command:     cmd,
-				Description: fmt.Sprintf("Add source: %s", s.Name),
+				Description: fmt.Sprintf("Add marketplace: %s", m.Alias),
 			})
 		}
 	}

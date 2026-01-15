@@ -3,11 +3,9 @@
 version = 1
 
 [marketplaces.claude-plugins-official]
-source = "github"
 repo = "anthropics/claude-plugins-official"
 
 [marketplaces.superpowers-marketplace]
-source = "github"
 repo = "obra/superpowers-marketplace"
 
 plugins = [

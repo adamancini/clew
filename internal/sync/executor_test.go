@@ -40,25 +40,20 @@ func newMockSyncer() (*Syncer, *MockCommandRunner) {
 	return NewSyncerWithRunner(mock), mock
 }
 
-func TestAddSourceGitHub(t *testing.T) {
+func TestAddMarketplace(t *testing.T) {
 	syncer, mock := newMockSyncer()
 
-	src := diff.SourceDiff{
-		Name:   "test-marketplace",
+	m := diff.MarketplaceDiff{
+		Alias:  "test-marketplace",
 		Action: diff.ActionAdd,
-		Desired: &config.Source{
-			Name: "test-marketplace",
-			Kind: config.SourceKindMarketplace,
-			Source: config.SourceConfig{
-				Type: config.SourceTypeGitHub,
-				URL:  "owner/test-marketplace",
-			},
+		Desired: &config.Marketplace{
+			Repo: "owner/test-marketplace",
 		},
 	}
 
-	op, err := syncer.addSource(src)
+	op, err := syncer.addMarketplace(m)
 	if err != nil {
-		t.Fatalf("addSource() error = %v", err)
+		t.Fatalf("addMarketplace() error = %v", err)
 	}
 
 	if len(mock.Commands) != 1 {
@@ -71,8 +66,8 @@ func TestAddSourceGitHub(t *testing.T) {
 	}
 
 	// Verify Operation struct
-	if op.Type != "source" {
-		t.Errorf("Operation.Type = %q, want %q", op.Type, "source")
+	if op.Type != "marketplace" {
+		t.Errorf("Operation.Type = %q, want %q", op.Type, "marketplace")
 	}
 	if op.Name != "test-marketplace" {
 		t.Errorf("Operation.Name = %q, want %q", op.Name, "test-marketplace")
@@ -325,21 +320,16 @@ func TestExecuteFullSync(t *testing.T) {
 	syncer, _ := newMockSyncer()
 
 	d := &diff.Result{
-		Sources: []diff.SourceDiff{
+		Marketplaces: []diff.MarketplaceDiff{
 			{
-				Name:   "new-marketplace",
+				Alias:  "new-marketplace",
 				Action: diff.ActionAdd,
-				Desired: &config.Source{
-					Name: "new-marketplace",
-					Kind: config.SourceKindMarketplace,
-					Source: config.SourceConfig{
-						Type: config.SourceTypeGitHub,
-						URL:  "owner/new",
-					},
+				Desired: &config.Marketplace{
+					Repo: "owner/new",
 				},
 			},
 			{
-				Name:   "extra-marketplace",
+				Alias:  "extra-marketplace",
 				Action: diff.ActionRemove,
 			},
 		},
@@ -374,7 +364,7 @@ func TestExecuteFullSync(t *testing.T) {
 		t.Fatalf("Execute() error = %v", err)
 	}
 
-	// Should have executed: source add, plugin install, plugin enable, mcp add
+	// Should have executed: marketplace add, plugin install, plugin enable, mcp add
 	// OAuth server should be skipped
 	if result.Installed != 3 {
 		t.Errorf("Installed = %d, want 3", result.Installed)
@@ -386,27 +376,22 @@ func TestExecuteFullSync(t *testing.T) {
 		t.Errorf("Skipped = %d, want 1 (OAuth server)", result.Skipped)
 	}
 	if len(result.Attention) != 2 {
-		t.Errorf("Attention items = %d, want 2 (extra source + OAuth server)", len(result.Attention))
+		t.Errorf("Attention items = %d, want 2 (extra marketplace + OAuth server)", len(result.Attention))
 	}
 }
 
 func TestExecuteWithErrors(t *testing.T) {
 	syncer, mock := newMockSyncer()
-	// Set up error for source add command
+	// Set up error for marketplace add command
 	mock.Errors["claude plugin marketplace add owner/failing"] = fmt.Errorf("connection failed")
 
 	d := &diff.Result{
-		Sources: []diff.SourceDiff{
+		Marketplaces: []diff.MarketplaceDiff{
 			{
-				Name:   "failing",
+				Alias:  "failing",
 				Action: diff.ActionAdd,
-				Desired: &config.Source{
-					Name: "failing",
-					Kind: config.SourceKindMarketplace,
-					Source: config.SourceConfig{
-						Type: config.SourceTypeGitHub,
-						URL:  "owner/failing",
-					},
+				Desired: &config.Marketplace{
+					Repo: "owner/failing",
 				},
 			},
 		},
@@ -432,12 +417,6 @@ type MockFileEditor struct {
 	Files map[string][]byte
 }
 
-func newMockFileEditor() *MockFileEditor {
-	return &MockFileEditor{
-		Files: make(map[string][]byte),
-	}
-}
-
 func (m *MockFileEditor) ReadFile(path string) ([]byte, error) {
 	if data, ok := m.Files[path]; ok {
 		return data, nil
@@ -449,4 +428,3 @@ func (m *MockFileEditor) WriteFile(path string, data []byte, perm os.FileMode) e
 	m.Files[path] = data
 	return nil
 }
-

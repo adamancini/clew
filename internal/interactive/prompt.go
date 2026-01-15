@@ -45,17 +45,17 @@ type Prompter struct {
 
 // Selection tracks which items were approved or skipped.
 type Selection struct {
-	Sources    map[string]bool // name -> approved
-	Plugins    map[string]bool // name -> approved
-	MCPServers map[string]bool // name -> approved
+	Marketplaces map[string]bool // alias -> approved
+	Plugins      map[string]bool // name -> approved
+	MCPServers   map[string]bool // name -> approved
 }
 
 // NewSelection creates an empty selection.
 func NewSelection() *Selection {
 	return &Selection{
-		Sources:    make(map[string]bool),
-		Plugins:    make(map[string]bool),
-		MCPServers: make(map[string]bool),
+		Marketplaces: make(map[string]bool),
+		Plugins:      make(map[string]bool),
+		MCPServers:   make(map[string]bool),
 	}
 }
 
@@ -129,23 +129,23 @@ func (p *Prompter) PromptForSelection(result *diff.Result) (*Selection, bool) {
 	willUpdate := 0
 	skipped := 0
 
-	// Process sources
-	hasSources := false
-	for _, src := range result.Sources {
-		if src.Action == diff.ActionNone || src.Action == diff.ActionRemove {
+	// Process marketplaces
+	hasMarketplaces := false
+	for _, m := range result.Marketplaces {
+		if m.Action == diff.ActionNone || m.Action == diff.ActionRemove {
 			continue
 		}
-		if !hasSources {
-			_, _ = fmt.Fprintln(p.out, "\nSources:")
-			hasSources = true
+		if !hasMarketplaces {
+			_, _ = fmt.Fprintln(p.out, "\nMarketplaces:")
+			hasMarketplaces = true
 		}
-		approved, quit := p.promptSource(src)
+		approved, quit := p.promptMarketplace(m)
 		if quit {
 			return nil, false
 		}
-		selection.Sources[src.Name] = approved
+		selection.Marketplaces[m.Alias] = approved
 		if approved {
-			if src.Action == diff.ActionAdd {
+			if m.Action == diff.ActionAdd {
 				willAdd++
 			} else {
 				willUpdate++
@@ -229,21 +229,16 @@ func (p *Prompter) PromptForSelection(result *diff.Result) (*Selection, bool) {
 }
 
 // promptMarketplace prompts for a single marketplace action.
-func (p *Prompter) promptSource(src diff.SourceDiff) (approved bool, quit bool) {
-	symbol, verb := actionSymbolVerb(src.Action)
-	_, _ = fmt.Fprintf(p.out, "  %s %s (will %s)\n", symbol, src.Name, verb)
+func (p *Prompter) promptMarketplace(m diff.MarketplaceDiff) (approved bool, quit bool) {
+	symbol, verb := actionSymbolVerb(m.Action)
+	_, _ = fmt.Fprintf(p.out, "  %s %s (will %s)\n", symbol, m.Alias, verb)
 
-	source := ""
-	if src.Desired != nil {
-		switch src.Desired.Source.Type {
-		case "github":
-			source = fmt.Sprintf("github:%s (kind=%s)", src.Desired.Source.URL, src.Desired.Kind)
-		case "local":
-			source = fmt.Sprintf("local:%s (kind=%s)", src.Desired.Source.Path, src.Desired.Kind)
-		}
+	repo := ""
+	if m.Desired != nil {
+		repo = m.Desired.Repo
 	}
 
-	resp := p.prompt("    -> %s %s from %s?", titleCase(verb), src.Name, source)
+	resp := p.prompt("    -> %s marketplace %s from %s?", titleCase(verb), m.Alias, repo)
 	switch resp {
 	case ResponseYes:
 		return true, false
@@ -333,17 +328,17 @@ func actionSymbolVerb(action diff.Action) (symbol, verb string) {
 // FilterDiffBySelection returns a new diff.Result containing only approved items.
 func FilterDiffBySelection(result *diff.Result, selection *Selection) *diff.Result {
 	filtered := &diff.Result{
-		Sources:    make([]diff.SourceDiff, 0),
-		Plugins:    make([]diff.PluginDiff, 0),
-		MCPServers: make([]diff.MCPServerDiff, 0),
+		Marketplaces: make([]diff.MarketplaceDiff, 0),
+		Plugins:      make([]diff.PluginDiff, 0),
+		MCPServers:   make([]diff.MCPServerDiff, 0),
 	}
 
-	for _, src := range result.Sources {
+	for _, m := range result.Marketplaces {
 		// Keep ActionNone and ActionRemove (info only), filter actionable items by selection
-		if src.Action == diff.ActionNone || src.Action == diff.ActionRemove {
-			filtered.Sources = append(filtered.Sources, src)
-		} else if selection.Sources[src.Name] {
-			filtered.Sources = append(filtered.Sources, src)
+		if m.Action == diff.ActionNone || m.Action == diff.ActionRemove {
+			filtered.Marketplaces = append(filtered.Marketplaces, m)
+		} else if selection.Marketplaces[m.Alias] {
+			filtered.Marketplaces = append(filtered.Marketplaces, m)
 		}
 	}
 

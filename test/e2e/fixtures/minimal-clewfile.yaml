@@ -1,10 +1,7 @@
 version: 1
-sources:
-  - name: superpowers-marketplace
-    kind: marketplace
-    source:
-      type: github
-      url: obra/superpowers-marketplace
+marketplaces:
+  superpowers-marketplace:
+    repo: obra/superpowers-marketplace
 
 plugins:
   - name: superpowers@superpowers-marketplace

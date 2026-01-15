@@ -13,14 +13,14 @@ import (
 // Read implements Reader using claude CLI commands.
 func (r *CLIReader) Read() (*State, error) {
 	state := &State{
-		Sources:    make(map[string]SourceState),
-		Plugins:    make(map[string]PluginState),
-		MCPServers: make(map[string]MCPServerState),
+		Marketplaces: make(map[string]MarketplaceState),
+		Plugins:      make(map[string]PluginState),
+		MCPServers:   make(map[string]MCPServerState),
 	}
 
-	// Read sources (from marketplace list command)
-	if err := r.readSources(state); err != nil {
-		return nil, fmt.Errorf("failed to read sources: %w", err)
+	// Read marketplaces from marketplace list command
+	if err := r.readMarketplaces(state); err != nil {
+		return nil, fmt.Errorf("failed to read marketplaces: %w", err)
 	}
 
 	// Read MCP servers
@@ -31,30 +31,30 @@ func (r *CLIReader) Read() (*State, error) {
 	return state, nil
 }
 
-// readSources parses output from `claude plugin marketplace list`.
-func (r *CLIReader) readSources(state *State) error {
+// readMarketplaces parses output from `claude plugin marketplace list`.
+func (r *CLIReader) readMarketplaces(state *State) error {
 	cmd := exec.Command("claude", "plugin", "marketplace", "list")
 	output, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to run claude plugin marketplace list: %w", err)
 	}
 
-	return parseSourceList(output, state)
+	return parseMarketplaceList(output, state)
 }
 
-// parseSourceList parses the human-readable marketplace list output.
+// parseMarketplaceList parses the human-readable marketplace list output.
 // Format:
 //
 //	❯ marketplace-name
 //	  Source: GitHub (owner/repo)
-func parseSourceList(output []byte, state *State) error {
+func parseMarketplaceList(output []byte, state *State) error {
 	scanner := bufio.NewScanner(bytes.NewReader(output))
 	var currentName string
 
 	// Regex to match marketplace name line: ❯ marketplace-name
 	nameRegex := regexp.MustCompile(`^\s*❯\s+(\S+)\s*$`)
-	// Regex to match source line: Source: GitHub (owner/repo) or Source: Local (/path)
-	sourceRegex := regexp.MustCompile(`^\s*Source:\s+(GitHub|Local)\s+\(([^)]+)\)\s*$`)
+	// Regex to match source line: Source: GitHub (owner/repo)
+	sourceRegex := regexp.MustCompile(`^\s*Source:\s+GitHub\s+\(([^)]+)\)\s*$`)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -64,23 +64,13 @@ func parseSourceList(output []byte, state *State) error {
 			continue
 		}
 
-		if matches := sourceRegex.FindStringSubmatch(line); len(matches) > 2 && currentName != "" {
-			sourceType := strings.ToLower(matches[1])
-			sourceValue := matches[2]
+		if matches := sourceRegex.FindStringSubmatch(line); len(matches) > 1 && currentName != "" {
+			repo := matches[1]
 
-			source := SourceState{
-				Name: currentName,
-				Kind: "marketplace", // CLI only shows marketplaces
-				Type: sourceType,
+			state.Marketplaces[currentName] = MarketplaceState{
+				Alias: currentName,
+				Repo:  repo,
 			}
-
-			if sourceType == "github" {
-				source.URL = sourceValue
-			} else {
-				source.Path = sourceValue
-			}
-
-			state.Sources[currentName] = source
 			currentName = ""
 		}
 	}

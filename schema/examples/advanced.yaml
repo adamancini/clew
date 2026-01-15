@@ -4,19 +4,18 @@
 version: 1
 
 marketplaces:
-  # GitHub marketplace
+  # Short form (owner/repo) - most common
   claude-plugins-official:
-    source: github
     repo: anthropics/claude-plugins-official
 
+  # With optional ref (branch, tag, or SHA)
   superpowers-marketplace:
-    source: github
     repo: obra/superpowers-marketplace
+    ref: main
 
-  # Local marketplace
+  # HTTPS URL form
   devops-toolkit:
-    source: local
-    path: ~/.claude/plugins/repos/devops-toolkit
+    repo: https://github.com/adamancini/devops-toolkit.git
 
 plugins:
   # Simple form - enabled by default, scope inferred

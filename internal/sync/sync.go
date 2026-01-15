@@ -10,7 +10,7 @@ import (
 
 // Operation represents a single sync operation performed.
 type Operation struct {
-	Type        string `json:"type"`            // "source", "plugin", or "mcp"
+	Type        string `json:"type"`            // "marketplace", "plugin", or "mcp"
 	Name        string `json:"name"`            // Item name
 	Action      string `json:"action"`          // "add", "enable", "disable"
 	Command     string `json:"command"`         // CLI command executed
@@ -99,11 +99,11 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 		Operations: []Operation{},
 	}
 
-	// Process sources first (plugins depend on them)
-	for _, src := range d.Sources {
-		switch src.Action {
+	// Process marketplaces first (plugins depend on them)
+	for _, m := range d.Marketplaces {
+		switch m.Action {
 		case diff.ActionAdd:
-			op, err := s.addSource(src)
+			op, err := s.addMarketplace(m)
 			result.Operations = append(result.Operations, op)
 			if err != nil {
 				result.Failed++
@@ -115,11 +115,11 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 			}
 		case diff.ActionRemove:
 			// Info only - don't remove
-			result.Attention = append(result.Attention, "source: "+src.Name)
+			result.Attention = append(result.Attention, "marketplace: "+m.Alias)
 		case diff.ActionSkipGit:
 			// Skipped due to git status issues
 			result.Skipped++
-			result.Attention = append(result.Attention, "source (git): "+src.Name+" - has uncommitted changes")
+			result.Attention = append(result.Attention, "marketplace (git): "+m.Alias+" - has uncommitted changes")
 		}
 	}
 
@@ -127,15 +127,7 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 	for _, p := range d.Plugins {
 		switch p.Action {
 		case diff.ActionAdd:
-			var op Operation
-			var err error
-			if p.IsLocal() {
-				// Local plugins are installed by editing installed_plugins.json directly
-				op, err = s.installLocalPlugin(p)
-			} else {
-				// Marketplace plugins use claude CLI
-				op, err = s.installPlugin(p)
-			}
+			op, err := s.installPlugin(p)
 			result.Operations = append(result.Operations, op)
 			if err != nil {
 				result.Failed++
@@ -155,31 +147,17 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 				result.Updated++
 			}
 		case diff.ActionUpdate:
-			var op Operation
-			var err error
-			if p.IsLocal() {
-				// Local plugin updates are handled by editing installed_plugins.json
-				op, err = s.installLocalPlugin(p)
-			} else {
-				// Marketplace plugins - update would need reinstall
-				op = Operation{
-					Type:        "plugin",
-					Name:        p.Name,
-					Action:      "update",
-					Description: "Marketplace plugin update requires manual reinstall",
-					Success:     true,
-					Skipped:     true,
-				}
+			// Plugin updates would need reinstall
+			op := Operation{
+				Type:        "plugin",
+				Name:        p.Name,
+				Action:      "update",
+				Description: "Plugin update requires manual reinstall",
+				Success:     true,
+				Skipped:     true,
 			}
 			result.Operations = append(result.Operations, op)
-			if err != nil {
-				result.Failed++
-				result.Errors = append(result.Errors, err)
-			} else if op.Skipped {
-				result.Skipped++
-			} else {
-				result.Updated++
-			}
+			result.Skipped++
 		case diff.ActionRemove:
 			// Info only - don't remove
 			result.Attention = append(result.Attention, "plugin: "+p.Name)

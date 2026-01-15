@@ -4,57 +4,48 @@ import (
 	"testing"
 )
 
-func TestParseSourceList(t *testing.T) {
+func TestParseMarketplaceList(t *testing.T) {
 	output := []byte(`Configured marketplaces:
 
   ❯ superpowers-marketplace
     Source: GitHub (obra/superpowers-marketplace)
-
-  ❯ local-plugins
-    Source: Local (/Users/test/plugins)
 
   ❯ claude-code-plugins
     Source: GitHub (anthropics/claude-code)
 `)
 
 	state := &State{
-		Sources: make(map[string]SourceState),
+		Marketplaces: make(map[string]MarketplaceState),
 	}
 
-	err := parseSourceList(output, state)
+	err := parseMarketplaceList(output, state)
 	if err != nil {
-		t.Fatalf("parseSourceList() error = %v", err)
+		t.Fatalf("parseMarketplaceList() error = %v", err)
 	}
 
-	if len(state.Sources) != 3 {
-		t.Errorf("Sources count = %d, want 3", len(state.Sources))
+	if len(state.Marketplaces) != 2 {
+		t.Errorf("Marketplaces count = %d, want 2", len(state.Marketplaces))
 	}
 
-	// Test GitHub source
-	if src, ok := state.Sources["superpowers-marketplace"]; ok {
-		if src.Type != "github" {
-			t.Errorf("Type = %s, want github", src.Type)
+	// Test superpowers marketplace
+	if m, ok := state.Marketplaces["superpowers-marketplace"]; ok {
+		if m.Repo != "obra/superpowers-marketplace" {
+			t.Errorf("Repo = %s, want obra/superpowers-marketplace", m.Repo)
 		}
-		if src.URL != "obra/superpowers-marketplace" {
-			t.Errorf("URL = %s, want obra/superpowers-marketplace", src.URL)
-		}
-		if src.Kind != "marketplace" {
-			t.Errorf("Kind = %s, want marketplace", src.Kind)
+		if m.Alias != "superpowers-marketplace" {
+			t.Errorf("Alias = %s, want superpowers-marketplace", m.Alias)
 		}
 	} else {
 		t.Error("Missing superpowers-marketplace")
 	}
 
-	// Test local source
-	if src, ok := state.Sources["local-plugins"]; ok {
-		if src.Type != "local" {
-			t.Errorf("Type = %s, want local", src.Type)
-		}
-		if src.Path != "/Users/test/plugins" {
-			t.Errorf("Path = %s, want /Users/test/plugins", src.Path)
+	// Test claude-code-plugins marketplace
+	if m, ok := state.Marketplaces["claude-code-plugins"]; ok {
+		if m.Repo != "anthropics/claude-code" {
+			t.Errorf("Repo = %s, want anthropics/claude-code", m.Repo)
 		}
 	} else {
-		t.Error("Missing local-plugins")
+		t.Error("Missing claude-code-plugins")
 	}
 }
 
@@ -130,16 +121,16 @@ plugin:context7:context7: npx -y @upstash/context7-mcp - ✓ Connected
 
 func TestParseEmptyOutput(t *testing.T) {
 	state := &State{
-		Sources:    make(map[string]SourceState),
-		MCPServers: make(map[string]MCPServerState),
+		Marketplaces: make(map[string]MarketplaceState),
+		MCPServers:   make(map[string]MCPServerState),
 	}
 
-	err := parseSourceList([]byte(""), state)
+	err := parseMarketplaceList([]byte(""), state)
 	if err != nil {
-		t.Errorf("parseSourceList() empty should not error: %v", err)
+		t.Errorf("parseMarketplaceList() empty should not error: %v", err)
 	}
-	if len(state.Sources) != 0 {
-		t.Errorf("Sources should be empty")
+	if len(state.Marketplaces) != 0 {
+		t.Errorf("Marketplaces should be empty")
 	}
 
 	err = parseMCPList([]byte(""), state)
