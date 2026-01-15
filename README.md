@@ -94,12 +94,10 @@ clew export > ~/.claude/Clewfile.yaml
 ```yaml
 version: 1
 
-sources:
-  - name: claude-plugins-official
-    kind: marketplace
-    source:
-      type: github
-      url: anthropics/claude-plugins-official
+marketplaces:
+  claude-plugins-official:
+    source: github
+    repo: anthropics/claude-plugins-official
 
 plugins:
   - context7@claude-plugins-official
@@ -121,14 +119,14 @@ clew sync -i
 clew diff --interactive
 ```
 
-Interactive mode prompts for each source, plugin, and MCP server change:
+Interactive mode prompts for each marketplace, plugin, and MCP server change:
 
 ```
 $ clew sync --interactive
 
-Sources:
+Marketplaces:
   + private-marketplace (will add)
-    -> Add private-marketplace from github:you/plugins (kind=marketplace)? [y/n/a/q] y
+    -> Add private-marketplace from github:you/plugins? [y/n/a/q] y
 
 Plugins:
   + pr-review-toolkit@claude-plugins-official (will add)
