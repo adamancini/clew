@@ -5,65 +5,61 @@ import (
 	"testing"
 )
 
-func TestValidateSources(t *testing.T) {
+func TestValidateMarketplaces(t *testing.T) {
 	tests := []struct {
-		name        string
-		sources     []Source
-		wantErr     bool
-		errContains string
+		name         string
+		marketplaces map[string]Marketplace
+		wantErr      bool
+		errContains  string
 	}{
 		{
-			name: "valid marketplace source",
-			sources: []Source{{
-				Name: "official",
-				Kind: SourceKindMarketplace,
-				Source: SourceConfig{
-					Type: SourceTypeGitHub,
-					URL:  "org/repo",
-				},
-			}},
+			name: "valid marketplace with short repo",
+			marketplaces: map[string]Marketplace{
+				"official": {Repo: "org/repo"},
+			},
 			wantErr: false,
 		},
 		{
-			name: "valid plugin source",
-			sources: []Source{{
-				Name: "my-plugin",
-				Kind: SourceKindPlugin,
-				Source: SourceConfig{
-					Type: SourceTypeGitHub,
-					URL:  "user/my-plugin",
-				},
-			}},
+			name: "valid marketplace with HTTPS URL",
+			marketplaces: map[string]Marketplace{
+				"gitlab": {Repo: "https://gitlab.com/company/plugins.git"},
+			},
 			wantErr: false,
 		},
 		{
-			name: "duplicate aliases",
-			sources: []Source{
-				{Name: "source1", Alias: "same", Kind: SourceKindPlugin, Source: SourceConfig{Type: SourceTypeGitHub, URL: "a/b"}},
-				{Name: "source2", Alias: "same", Kind: SourceKindPlugin, Source: SourceConfig{Type: SourceTypeGitHub, URL: "c/d"}},
+			name: "valid marketplace with SSH URL",
+			marketplaces: map[string]Marketplace{
+				"private": {Repo: "git@github.com:org/repo.git"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid marketplace with ref",
+			marketplaces: map[string]Marketplace{
+				"official": {Repo: "org/repo", Ref: "v1.0.0"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing repo",
+			marketplaces: map[string]Marketplace{
+				"bad": {},
 			},
 			wantErr:     true,
-			errContains: "duplicate alias",
+			errContains: "repo is required",
 		},
 		{
-			name: "marketplace kind with missing URL",
-			sources: []Source{{
-				Name: "bad",
-				Kind: SourceKindMarketplace,
-				Source: SourceConfig{
-					Type: SourceTypeGitHub,
-				},
-			}},
-			wantErr:     true,
-			errContains: "github source requires url",
+			name:         "empty marketplaces map is valid",
+			marketplaces: map[string]Marketplace{},
+			wantErr:      false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateSources(tt.sources)
+			err := validateMarketplaces(tt.marketplaces)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateSources() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validateMarketplaces() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.wantErr && tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 				t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
@@ -80,25 +76,18 @@ func TestValidatePlugin(t *testing.T) {
 		errContains string
 	}{
 		{
-			name:    "valid simple",
+			name:    "valid plugin@marketplace format",
 			plugin:  Plugin{Name: "test@marketplace"},
 			wantErr: false,
 		},
 		{
-			name:    "valid with scope",
+			name:    "valid with scope user",
 			plugin:  Plugin{Name: "test@marketplace", Scope: "user"},
 			wantErr: false,
 		},
 		{
-			name: "valid inline github source",
-			plugin: Plugin{
-				Name: "my-plugin",
-				Source: &SourceConfig{
-					Type: SourceTypeGitHub,
-					URL:  "user/my-plugin",
-				},
-				Scope: "user",
-			},
+			name:    "valid with scope project",
+			plugin:  Plugin{Name: "test@marketplace", Scope: "project"},
 			wantErr: false,
 		},
 		{
@@ -108,42 +97,49 @@ func TestValidatePlugin(t *testing.T) {
 			errContains: "name is required",
 		},
 		{
+			name:        "invalid format - missing @",
+			plugin:      Plugin{Name: "test"},
+			wantErr:     true,
+			errContains: "must be plugin@marketplace format",
+		},
+		{
+			name:        "invalid format - just @",
+			plugin:      Plugin{Name: "@"},
+			wantErr:     true,
+			errContains: "must be plugin@marketplace format",
+		},
+		{
+			name:        "invalid format - missing marketplace",
+			plugin:      Plugin{Name: "test@"},
+			wantErr:     true,
+			errContains: "must be plugin@marketplace format",
+		},
+		{
+			name:        "invalid format - missing plugin name",
+			plugin:      Plugin{Name: "@marketplace"},
+			wantErr:     true,
+			errContains: "must be plugin@marketplace format",
+		},
+		{
 			name:        "invalid scope",
-			plugin:      Plugin{Name: "test", Scope: "invalid"},
+			plugin:      Plugin{Name: "test@marketplace", Scope: "invalid"},
 			wantErr:     true,
 			errContains: "invalid scope",
 		},
 		{
-			name: "inline source missing type",
-			plugin: Plugin{
-				Name:   "test",
-				Source: &SourceConfig{URL: "org/repo"},
-			},
-			wantErr:     true,
-			errContains: "source type is required",
+			name:    "valid plugin name with dashes",
+			plugin:  Plugin{Name: "my-plugin@my-marketplace"},
+			wantErr: false,
 		},
 		{
-			name: "inline github source missing url",
-			plugin: Plugin{
-				Name: "test",
-				Source: &SourceConfig{
-					Type: SourceTypeGitHub,
-				},
-			},
-			wantErr:     true,
-			errContains: "github source requires url",
+			name:    "valid plugin name with underscores",
+			plugin:  Plugin{Name: "my_plugin@my_marketplace"},
+			wantErr: false,
 		},
 		{
-			name: "invalid source type",
-			plugin: Plugin{
-				Name: "test",
-				Source: &SourceConfig{
-					Type: "invalid",
-					Path: "/some/path",
-				},
-			},
-			wantErr:     true,
-			errContains: "invalid source type",
+			name:    "valid plugin name with numbers",
+			plugin:  Plugin{Name: "plugin123@marketplace456"},
+			wantErr: false,
 		},
 	}
 
@@ -227,17 +223,73 @@ func TestValidateMCPServer(t *testing.T) {
 	}
 }
 
+func TestValidatePluginReferences(t *testing.T) {
+	tests := []struct {
+		name        string
+		clewfile    *Clewfile
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "valid reference to existing marketplace",
+			clewfile: &Clewfile{
+				Marketplaces: map[string]Marketplace{
+					"official": {Repo: "org/repo"},
+				},
+				Plugins: []Plugin{
+					{Name: "test@official"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid reference to non-existent marketplace",
+			clewfile: &Clewfile{
+				Marketplaces: map[string]Marketplace{
+					"official": {Repo: "org/repo"},
+				},
+				Plugins: []Plugin{
+					{Name: "test@nonexistent"},
+				},
+			},
+			wantErr:     true,
+			errContains: "references unknown marketplace 'nonexistent'",
+		},
+		{
+			name: "multiple valid plugins",
+			clewfile: &Clewfile{
+				Marketplaces: map[string]Marketplace{
+					"official":    {Repo: "org/repo"},
+					"superpowers": {Repo: "obra/superpowers"},
+				},
+				Plugins: []Plugin{
+					{Name: "context7@official"},
+					{Name: "brainstorming@superpowers"},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validatePluginReferences(tt.clewfile)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validatePluginReferences() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
+			}
+		})
+	}
+}
+
 func TestValidateFull(t *testing.T) {
 	valid := &Clewfile{
 		Version: 1,
-		Sources: []Source{{
-			Name: "official",
-			Kind: SourceKindMarketplace,
-			Source: SourceConfig{
-				Type: SourceTypeGitHub,
-				URL:  "anthropics/plugins",
-			},
-		}},
+		Marketplaces: map[string]Marketplace{
+			"official": {Repo: "anthropics/plugins"},
+		},
 		Plugins: []Plugin{
 			{Name: "test@official"},
 		},
@@ -252,18 +304,14 @@ func TestValidateFull(t *testing.T) {
 
 	invalid := &Clewfile{
 		Version: 1,
-		Sources: []Source{{
-			Name: "bad",
-			Kind: SourceKindMarketplace,
-			Source: SourceConfig{
-				Type: "invalid",
-			},
-		}},
+		Marketplaces: map[string]Marketplace{
+			"bad": {}, // Missing repo
+		},
 		Plugins: []Plugin{
-			{Name: ""},
+			{Name: ""}, // Missing name
 		},
 		MCPServers: map[string]MCPServer{
-			"bad": {Transport: ""},
+			"bad": {Transport: ""}, // Missing transport
 		},
 	}
 

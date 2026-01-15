@@ -13,25 +13,10 @@ import (
 // Type aliases for backward compatibility.
 // These types are now defined in internal/types and re-exported here.
 type (
-	// SourceKind represents the type of source.
-	SourceKind = types.SourceKind
-	// SourceType represents how a source is accessed.
-	SourceType = types.SourceType
 	// Scope represents the installation scope.
 	Scope = types.Scope
 	// TransportType represents the MCP server transport protocol.
 	TransportType = types.TransportType
-)
-
-// Source kind constants - re-exported from types package.
-const (
-	SourceKindMarketplace = types.SourceKindMarketplace
-	SourceKindPlugin      = types.SourceKindPlugin
-)
-
-// Source type constants - re-exported from types package.
-const (
-	SourceTypeGitHub = types.SourceTypeGitHub
 )
 
 // Scope constants - re-exported from types package.
@@ -47,58 +32,40 @@ const (
 	TransportSSE   = types.TransportSSE
 )
 
-// SourceConfig defines where a source comes from.
-type SourceConfig struct {
-	Type SourceType `yaml:"type" toml:"type" json:"type"`
-	URL  string     `yaml:"url,omitempty" toml:"url,omitempty" json:"url,omitempty"`   // For github: org/repo or full URL
-	Ref  string     `yaml:"ref,omitempty" toml:"ref,omitempty" json:"ref,omitempty"`   // Optional git ref (branch/tag)
-	Path string     `yaml:"path,omitempty" toml:"path,omitempty" json:"path,omitempty"` // For local: filesystem path
-}
-
-// Source represents a unified source (marketplace, plugin repo, or local plugin).
-type Source struct {
-	Name   string       `yaml:"name" toml:"name" json:"name"`
-	Alias  string       `yaml:"alias,omitempty" toml:"alias,omitempty" json:"alias,omitempty"`
-	Kind   SourceKind   `yaml:"kind" toml:"kind" json:"kind"`
-	Source SourceConfig `yaml:"source" toml:"source" json:"source"`
-}
-
-// GetAlias returns the alias if set, otherwise returns the name.
-func (s *Source) GetAlias() string {
-	if s.Alias != "" {
-		return s.Alias
-	}
-	return s.Name
+// Marketplace represents a plugin marketplace source.
+// Marketplaces are repositories containing multiple plugins that can be installed.
+type Marketplace struct {
+	Repo string `yaml:"repo" toml:"repo" json:"repo"` // Repository URL (e.g., "owner/repo", "https://gitlab.com/company/plugins.git")
+	Ref  string `yaml:"ref,omitempty" toml:"ref,omitempty" json:"ref,omitempty"` // Optional git ref (branch/tag/SHA)
 }
 
 // Clewfile represents the parsed configuration file.
 type Clewfile struct {
-	Version    int                  `yaml:"version" toml:"version" json:"version"`
-	Sources    []Source             `yaml:"sources,omitempty" toml:"sources,omitempty" json:"sources,omitempty"`
-	Plugins    []Plugin             `yaml:"plugins" toml:"plugins" json:"plugins"`
-	MCPServers map[string]MCPServer `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
+	Version      int                    `yaml:"version" toml:"version" json:"version"`
+	Marketplaces map[string]Marketplace `yaml:"marketplaces,omitempty" toml:"marketplaces,omitempty" json:"marketplaces,omitempty"`
+	Plugins      []Plugin               `yaml:"plugins" toml:"plugins" json:"plugins"`
+	MCPServers   map[string]MCPServer   `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
 }
 
-// GetSourceByAliasOrName finds a source by its alias or name.
-func (c *Clewfile) GetSourceByAliasOrName(ref string) (*Source, error) {
-	for i := range c.Sources {
-		if c.Sources[i].GetAlias() == ref || c.Sources[i].Name == ref {
-			return &c.Sources[i], nil
-		}
+// GetMarketplace finds a marketplace by its alias (map key).
+func (c *Clewfile) GetMarketplace(alias string) (*Marketplace, error) {
+	if m, ok := c.Marketplaces[alias]; ok {
+		return &m, nil
 	}
-	return nil, fmt.Errorf("source not found: %s", ref)
+	return nil, fmt.Errorf("marketplace not found: %s", alias)
 }
 
 // Plugin represents a plugin to install.
 // Can be specified as:
-//   - Simple string: "name@source" or "name" (for plugin-kind sources with matching names)
-//   - Struct with inline source for one-off plugins
-//   - Struct with reference to named source
+//   - Simple string: "name@marketplace" (e.g., "context7@official")
+//   - Struct with name, enabled, and scope
+//
+// The name must be in "plugin@marketplace" format where marketplace
+// refers to a key in the marketplaces map.
 type Plugin struct {
-	Name    string        `yaml:"name" toml:"name" json:"name"`
-	Source  *SourceConfig `yaml:"source,omitempty" toml:"source,omitempty" json:"source,omitempty"` // Inline source for one-off plugins
-	Enabled *bool         `yaml:"enabled,omitempty" toml:"enabled,omitempty" json:"enabled,omitempty"`
-	Scope   string        `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
+	Name    string `yaml:"name" toml:"name" json:"name"`
+	Enabled *bool  `yaml:"enabled,omitempty" toml:"enabled,omitempty" json:"enabled,omitempty"`
+	Scope   string `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
 }
 
 // MCPServer represents an MCP server configuration.

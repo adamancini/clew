@@ -10,19 +10,23 @@
 //  4. See CLAUDE.md "Schema Maintenance" section for full checklist
 //
 // Synced validation rules:
-//   - Source kinds: marketplace, plugin, local (validateSources)
-//   - Source types: github, local (validateSources)
+//   - Marketplace repo: non-empty string (validateMarketplaces)
 //   - Plugin scopes: user, project (validatePlugin)
+//   - Plugin name format: plugin@marketplace (validatePluginReferences)
 //   - MCP transports: stdio, http, sse (validateMCPServer)
 //   - MCP scopes: user, project (validateMCPServer)
 package config
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/adamancini/clew/internal/types"
 )
+
+// pluginNamePattern validates plugin names in the format "plugin@marketplace"
+var pluginNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+$`)
 
 // ValidationError represents a Clewfile validation error.
 type ValidationError struct {
@@ -38,8 +42,8 @@ func (e ValidationError) Error() string {
 func Validate(c *Clewfile) error {
 	var errors []string
 
-	// Validate sources
-	if err := validateSources(c.Sources); err != nil {
+	// Validate marketplaces
+	if err := validateMarketplaces(c.Marketplaces); err != nil {
 		errors = append(errors, err.Error())
 	}
 
@@ -69,58 +73,25 @@ func Validate(c *Clewfile) error {
 	return nil
 }
 
-func validateSources(sources []Source) error {
-	aliases := make(map[string]bool)
-
-	for i, s := range sources {
-		// Validate required fields
-		if s.Name == "" {
+func validateMarketplaces(marketplaces map[string]Marketplace) error {
+	for alias, m := range marketplaces {
+		// Validate alias (map key) is not empty
+		if alias == "" {
 			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].name", i),
-				Message: "name is required",
+				Field:   "marketplaces",
+				Message: "marketplace alias cannot be empty",
 			}
 		}
 
-		// Validate kind using the type's Validate method
-		if err := s.Kind.Validate(); err != nil {
+		// Validate repo is required and non-empty
+		if m.Repo == "" {
 			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].kind", i),
-				Message: err.Error(),
+				Field:   fmt.Sprintf("marketplaces.%s.repo", alias),
+				Message: "repo is required",
 			}
 		}
 
-		// Check alias uniqueness
-		alias := s.GetAlias()
-		if aliases[alias] {
-			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].alias", i),
-				Message: fmt.Sprintf("duplicate alias '%s'", alias),
-			}
-		}
-		aliases[alias] = true
-
-		// Validate source type using the type's Validate method
-		if err := s.Source.Type.Validate(); err != nil {
-			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].source.type", i),
-				Message: err.Error(),
-			}
-		}
-
-		// All source kinds (marketplace, plugin) require github source type
-		if !s.Source.Type.IsGitHub() {
-			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].source.type", i),
-				Message: fmt.Sprintf("source type must be 'github' (got '%s')", s.Source.Type),
-			}
-		}
-
-		if s.Source.URL == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("sources[%d].source.url", i),
-				Message: "github source requires url",
-			}
-		}
+		// Note: ref is optional, git will validate if it exists
 	}
 
 	return nil
@@ -128,20 +99,15 @@ func validateSources(sources []Source) error {
 
 func validatePluginReferences(c *Clewfile) error {
 	for i, p := range c.Plugins {
-		// Skip plugins with inline sources
-		if p.Source != nil {
-			continue
-		}
-
-		// Check if plugin name contains @source reference
+		// Check if plugin name contains @marketplace reference
 		if strings.Contains(p.Name, "@") {
 			parts := strings.SplitN(p.Name, "@", 2)
-			sourceRef := parts[1]
+			marketplaceRef := parts[1]
 
-			if _, err := c.GetSourceByAliasOrName(sourceRef); err != nil {
+			if _, err := c.GetMarketplace(marketplaceRef); err != nil {
 				return ValidationError{
 					Field:   fmt.Sprintf("plugins[%d].name", i),
-					Message: fmt.Sprintf("references unknown source '%s'", sourceRef),
+					Message: fmt.Sprintf("references unknown marketplace '%s'", marketplaceRef),
 				}
 			}
 		}
@@ -158,22 +124,11 @@ func validatePlugin(index int, p Plugin) error {
 		}
 	}
 
-	// Validate inline source if present
-	if p.Source != nil {
-		// Validate source type using the type's Validate method
-		if err := p.Source.Type.Validate(); err != nil {
-			return ValidationError{
-				Field:   fmt.Sprintf("plugins[%d].source", index),
-				Message: err.Error(),
-			}
-		}
-
-		// Only github sources are supported
-		if p.Source.URL == "" {
-			return ValidationError{
-				Field:   fmt.Sprintf("plugins[%d].source.url", index),
-				Message: "github source requires url",
-			}
+	// Validate plugin name format (plugin@marketplace)
+	if !pluginNamePattern.MatchString(p.Name) {
+		return ValidationError{
+			Field:   fmt.Sprintf("plugins[%d].name", index),
+			Message: fmt.Sprintf("invalid plugin name '%s' (must be plugin@marketplace format)", p.Name),
 		}
 	}
 
