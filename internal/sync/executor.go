@@ -66,11 +66,12 @@ func (s *Syncer) addSource(src diff.SourceDiff) (Operation, error) {
 		return op, fmt.Errorf("no desired state for source %s", src.Name)
 	}
 
-	// Only marketplace-kind sources can be added via CLI
-	if !src.Desired.Kind.IsMarketplace() {
+	// Both marketplace and plugin kinds can be added via CLI
+	// (both are GitHub repos, just different structure)
+	if !src.Desired.Kind.IsMarketplace() && !src.Desired.Kind.IsPlugin() {
 		op.Success = true
 		op.Skipped = true
-		op.Description = fmt.Sprintf("Skip non-marketplace source (kind=%s): %s", src.Desired.Kind, src.Name)
+		op.Description = fmt.Sprintf("Skip unsupported source kind (%s): %s", src.Desired.Kind, src.Name)
 		return op, nil
 	}
 
