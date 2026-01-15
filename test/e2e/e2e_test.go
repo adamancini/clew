@@ -163,8 +163,8 @@ func TestExportCommand(t *testing.T) {
 		if !strings.Contains(stdout, "version: 1") {
 			t.Errorf("expected version in output, got: %s", stdout)
 		}
-		if !strings.Contains(stdout, "sources:") {
-			t.Errorf("expected sources in output, got: %s", stdout)
+		if !strings.Contains(stdout, "marketplaces:") {
+			t.Errorf("expected marketplaces in output, got: %s", stdout)
 		}
 		if !strings.Contains(stdout, "plugins:") {
 			t.Errorf("expected plugins in output, got: %s", stdout)
@@ -187,8 +187,8 @@ func TestExportCommand(t *testing.T) {
 		if _, ok := result["version"]; !ok {
 			t.Error("expected version field in JSON output")
 		}
-		if _, ok := result["sources"]; !ok {
-			t.Error("expected sources field in JSON output")
+		if _, ok := result["marketplaces"]; !ok {
+			t.Error("expected marketplaces field in JSON output")
 		}
 		if _, ok := result["plugins"]; !ok {
 			t.Error("expected plugins field in JSON output")
@@ -449,7 +449,7 @@ func TestValidation(t *testing.T) {
 	testDir, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	t.Run("invalid marketplace source", func(t *testing.T) {
+	t.Run("invalid marketplace - missing repo", func(t *testing.T) {
 		invalidPath := filepath.Join(testDir, "invalid.yaml")
 		fixtureContent, err := os.ReadFile("fixtures/invalid-source-clewfile.yaml")
 		if err != nil {
@@ -461,11 +461,11 @@ func TestValidation(t *testing.T) {
 
 		_, stderr, err := runClew(t, testDir, "status", "--config", invalidPath, "--filesystem")
 		if err == nil {
-			t.Fatal("expected command to fail with invalid source")
+			t.Fatal("expected command to fail with missing repo")
 		}
 
-		if !strings.Contains(stderr, "invalid source") {
-			t.Errorf("expected validation error message, got: %s", stderr)
+		if !strings.Contains(stderr, "repo is required") {
+			t.Errorf("expected validation error message about missing repo, got: %s", stderr)
 		}
 	})
 
@@ -588,8 +588,8 @@ func TestCLIReader(t *testing.T) {
 		if !strings.Contains(stdout, "version: 1") {
 			t.Errorf("expected version in output, got: %s", stdout)
 		}
-		if !strings.Contains(stdout, "sources:") {
-			t.Errorf("expected sources in output, got: %s", stdout)
+		if !strings.Contains(stdout, "marketplaces:") {
+			t.Errorf("expected marketplaces in output, got: %s", stdout)
 		}
 	})
 

@@ -1,15 +1,9 @@
 version: 1
-sources:
-  - name: claude-code-plugins
-    kind: marketplace
-    source:
-      type: github
-      url: anthropics/claude-code
-  - name: superpowers-marketplace
-    kind: marketplace
-    source:
-      type: github
-      url: obra/superpowers-marketplace
+marketplaces:
+  claude-code-plugins:
+    repo: anthropics/claude-code
+  superpowers-marketplace:
+    repo: obra/superpowers-marketplace
 
 plugins:
   - name: superpowers@superpowers-marketplace

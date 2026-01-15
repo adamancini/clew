@@ -1,7 +1,4 @@
 version: 1
-sources:
-  - name: bad-source
-    kind: marketplace
-    source:
-      type: invalid_source
-      url: test/repo
+marketplaces:
+  bad-source:
+    # Missing required 'repo' field
