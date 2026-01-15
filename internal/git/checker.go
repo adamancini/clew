@@ -6,27 +6,27 @@ import (
 
 // CheckResult holds git status results for all local items in a Clewfile.
 type CheckResult struct {
-	Sources     map[string]Status // Key is source name
-	Plugins     map[string]Status // Key is plugin name
-	Warnings    []string          // Items that should be skipped (uncommitted changes)
-	Info        []string          // Informational messages (ahead/behind)
-	SkipSources map[string]bool   // Sources to skip due to git issues
-	SkipPlugins map[string]bool   // Plugins to skip due to git issues
+	Marketplaces    map[string]Status // Key is marketplace alias
+	Plugins         map[string]Status // Key is plugin name
+	Warnings        []string          // Items that should be skipped (uncommitted changes)
+	Info            []string          // Informational messages (ahead/behind)
+	SkipMarketplaces map[string]bool  // Marketplaces to skip due to git issues
+	SkipPlugins     map[string]bool   // Plugins to skip due to git issues
 }
 
 // NewCheckResult creates an empty CheckResult.
 func NewCheckResult() *CheckResult {
 	return &CheckResult{
-		Sources:     make(map[string]Status),
-		Plugins:     make(map[string]Status),
-		SkipSources: make(map[string]bool),
-		SkipPlugins: make(map[string]bool),
+		Marketplaces:     make(map[string]Status),
+		Plugins:          make(map[string]Status),
+		SkipMarketplaces: make(map[string]bool),
+		SkipPlugins:      make(map[string]bool),
 	}
 }
 
-// ShouldSkipSource returns true if the source should be skipped due to git issues.
-func (r *CheckResult) ShouldSkipSource(name string) bool {
-	return r.SkipSources[name]
+// ShouldSkipMarketplace returns true if the marketplace should be skipped due to git issues.
+func (r *CheckResult) ShouldSkipMarketplace(alias string) bool {
+	return r.SkipMarketplaces[alias]
 }
 
 // ShouldSkipPlugin returns true if the plugin should be skipped due to git issues.

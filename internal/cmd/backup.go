@@ -366,25 +366,18 @@ func runBackupPrune(keep int) error {
 // backupToConfig converts a backup to a Clewfile for diff computation.
 func backupToConfig(bak *backup.Backup) *config.Clewfile {
 	clewfile := &config.Clewfile{
-		Version:    1,
-		Sources:    []config.Source{},
-		Plugins:    []config.Plugin{},
-		MCPServers: make(map[string]config.MCPServer),
+		Version:      1,
+		Marketplaces: make(map[string]config.Marketplace),
+		Plugins:      []config.Plugin{},
+		MCPServers:   make(map[string]config.MCPServer),
 	}
 
-	// Convert sources
-	for name, src := range bak.State.Sources {
-		source := config.Source{
-			Name: name,
-			Kind: config.SourceKind(src.Kind),
-			Source: config.SourceConfig{
-				Type: config.SourceType(src.Type),
-				URL:  src.URL,
-				Ref:  src.Ref,
-				Path: src.Path,
-			},
+	// Convert marketplaces
+	for alias, m := range bak.State.Marketplaces {
+		clewfile.Marketplaces[alias] = config.Marketplace{
+			Repo: m.Repo,
+			Ref:  m.Ref,
 		}
-		clewfile.Sources = append(clewfile.Sources, source)
 	}
 
 	// Convert plugins
@@ -417,11 +410,11 @@ func backupToConfig(bak *backup.Backup) *config.Clewfile {
 
 // printRestoreDiff prints a summary of restore changes.
 func printRestoreDiff(result *diff.Result) {
-	for _, src := range result.Sources {
-		if src.Action == diff.ActionNone {
+	for _, m := range result.Marketplaces {
+		if m.Action == diff.ActionNone {
 			continue
 		}
-		printDiffLine(src.Action, "source", src.Name)
+		printDiffLine(m.Action, "marketplace", m.Alias)
 	}
 
 	for _, p := range result.Plugins {

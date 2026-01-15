@@ -11,20 +11,20 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-func TestComputeSources(t *testing.T) {
+func TestComputeMarketplaces(t *testing.T) {
 	clewfile := &config.Clewfile{
-		Sources: []config.Source{
-			{Name: "existing", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "owner/existing"}},
-			{Name: "new", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "owner/new"}},
-			{Name: "updated", Kind: config.SourceKindMarketplace, Source: config.SourceConfig{Type: config.SourceTypeGitHub, URL: "owner/updated-new"}},
+		Marketplaces: map[string]config.Marketplace{
+			"existing": {Repo: "owner/existing"},
+			"new":      {Repo: "owner/new"},
+			"updated":  {Repo: "owner/updated-new"},
 		},
 	}
 
 	current := &state.State{
-		Sources: map[string]state.SourceState{
-			"existing": {Name: "existing", Kind: "marketplace", Type: "github", URL: "owner/existing"},
-			"updated":  {Name: "updated", Kind: "marketplace", Type: "github", URL: "owner/updated-old"},
-			"extra":    {Name: "extra", Kind: "marketplace", Type: "github", URL: "owner/extra"},
+		Marketplaces: map[string]state.MarketplaceState{
+			"existing": {Alias: "existing", Repo: "owner/existing"},
+			"updated":  {Alias: "updated", Repo: "owner/updated-old"},
+			"extra":    {Alias: "extra", Repo: "owner/extra"},
 		},
 		Plugins:    make(map[string]state.PluginState),
 		MCPServers: make(map[string]state.MCPServerState),
@@ -32,14 +32,14 @@ func TestComputeSources(t *testing.T) {
 
 	result := Compute(clewfile, current)
 
-	// Should have 4 source diffs
-	if len(result.Sources) != 4 {
-		t.Errorf("Sources count = %d, want 4", len(result.Sources))
+	// Should have 4 marketplace diffs
+	if len(result.Marketplaces) != 4 {
+		t.Errorf("Marketplaces count = %d, want 4", len(result.Marketplaces))
 	}
 
 	actionCounts := make(map[Action]int)
-	for _, src := range result.Sources {
-		actionCounts[src.Action]++
+	for _, m := range result.Marketplaces {
+		actionCounts[m.Action]++
 	}
 
 	if actionCounts[ActionNone] != 1 {
@@ -64,8 +64,8 @@ func TestComputePlugins(t *testing.T) {
 			{Name: "to-enable@marketplace", Enabled: boolPtr(true)},
 			{Name: "to-disable@marketplace", Enabled: boolPtr(false)},
 		},
-		Sources:    []config.Source{},
-		MCPServers: make(map[string]config.MCPServer),
+		Marketplaces: make(map[string]config.Marketplace),
+		MCPServers:   make(map[string]config.MCPServer),
 	}
 
 	current := &state.State{
@@ -75,8 +75,8 @@ func TestComputePlugins(t *testing.T) {
 			"to-disable@marketplace": {Name: "to-disable", Marketplace: "marketplace", Enabled: true},
 			"extra@marketplace":      {Name: "extra", Marketplace: "marketplace", Enabled: true},
 		},
-		Sources:    make(map[string]state.SourceState),
-		MCPServers: make(map[string]state.MCPServerState),
+		Marketplaces: make(map[string]state.MarketplaceState),
+		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	result := Compute(clewfile, current)
@@ -111,8 +111,8 @@ func TestComputeMCPServers(t *testing.T) {
 			"new-oauth":  {Transport: "http", URL: "https://api.example.com/mcp"},
 			"new-authed": {Transport: "http", URL: "https://api.example.com/mcp", Env: map[string]string{"API_KEY": "secret"}},
 		},
-		Sources: []config.Source{},
-		Plugins: []config.Plugin{},
+		Marketplaces: make(map[string]config.Marketplace),
+		Plugins:      []config.Plugin{},
 	}
 
 	current := &state.State{
@@ -120,8 +120,8 @@ func TestComputeMCPServers(t *testing.T) {
 			"existing": {Name: "existing", Transport: "stdio", Command: "npx"},
 			"extra":    {Name: "extra", Transport: "stdio", Command: "extra-cmd"},
 		},
-		Sources: make(map[string]state.SourceState),
-		Plugins: make(map[string]state.PluginState),
+		Marketplaces: make(map[string]state.MarketplaceState),
+		Plugins:      make(map[string]state.PluginState),
 	}
 
 	result := Compute(clewfile, current)
@@ -196,9 +196,9 @@ func TestServerRequiresOAuth(t *testing.T) {
 
 func TestSummary(t *testing.T) {
 	result := &Result{
-		Sources: []SourceDiff{
-			{Name: "src1", Action: ActionAdd},
-			{Name: "src2", Action: ActionRemove},
+		Marketplaces: []MarketplaceDiff{
+			{Alias: "m1", Action: ActionAdd},
+			{Alias: "m2", Action: ActionRemove},
 		},
 		Plugins: []PluginDiff{
 			{Name: "p1", Action: ActionAdd},
@@ -216,7 +216,7 @@ func TestSummary(t *testing.T) {
 
 	add, update, remove, attention := result.Summary()
 
-	if add != 3 { // src1 + p1 + s1
+	if add != 3 { // m1 + p1 + s1
 		t.Errorf("add = %d, want 3", add)
 	}
 	if update != 3 { // p2 + p3 + s3
@@ -225,62 +225,7 @@ func TestSummary(t *testing.T) {
 	if remove != 0 { // Non-destructive, removals count as attention
 		t.Errorf("remove = %d, want 0", remove)
 	}
-	if attention != 4 { // src2 + p4 + s2 + s4
+	if attention != 4 { // m2 + p4 + s2 + s4
 		t.Errorf("attention = %d, want 4", attention)
-	}
-}
-
-func TestPluginDiffIsLocal(t *testing.T) {
-	// NOTE: As of v0.7.0, IsLocal() always returns false since local plugins are no longer supported
-	tests := []struct {
-		name     string
-		diff     PluginDiff
-		expected bool
-	}{
-		{
-			name: "marketplace plugin (no source)",
-			diff: PluginDiff{
-				Name: "test@marketplace",
-				Desired: &config.Plugin{
-					Name: "test@marketplace",
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "marketplace plugin (github source)",
-			diff: PluginDiff{
-				Name: "test@marketplace",
-				Desired: &config.Plugin{
-					Name: "test@marketplace",
-					Source: &config.SourceConfig{
-						Type: config.SourceTypeGitHub,
-						URL:  "owner/repo",
-					},
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "plugin from current state",
-			diff: PluginDiff{
-				Name: "existing-marketplace",
-				Current: &state.PluginState{
-					Name:        "existing-marketplace",
-					Marketplace: "marketplace",
-					IsLocal:     false,
-				},
-			},
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := tt.diff.IsLocal()
-			if got != tt.expected {
-				t.Errorf("IsLocal() = %v, want %v", got, tt.expected)
-			}
-		})
 	}
 }

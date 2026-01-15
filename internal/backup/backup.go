@@ -23,9 +23,9 @@ type Backup struct {
 
 // BackupState contains the configuration state at backup time.
 type BackupState struct {
-	Sources    map[string]state.SourceState    `json:"sources"`
-	Plugins    map[string]state.PluginState    `json:"plugins"`
-	MCPServers map[string]state.MCPServerState `json:"mcp_servers"`
+	Marketplaces map[string]state.MarketplaceState `json:"marketplaces"`
+	Plugins      map[string]state.PluginState      `json:"plugins"`
+	MCPServers   map[string]state.MCPServerState   `json:"mcp_servers"`
 }
 
 // BackupInfo provides summary information about a backup for listing.
@@ -93,9 +93,9 @@ func (m *Manager) Create(currentState *state.State, note string) (*Backup, error
 		Note:        note,
 		ClewVersion: m.clewVersion,
 		State: BackupState{
-			Sources:    currentState.Sources,
-			Plugins:    currentState.Plugins,
-			MCPServers: currentState.MCPServers,
+			Marketplaces: currentState.Marketplaces,
+			Plugins:      currentState.Plugins,
+			MCPServers:   currentState.MCPServers,
 		},
 	}
 
@@ -217,9 +217,9 @@ func (m *Manager) loadBackup(path string) (*Backup, error) {
 // ToState converts a backup's state to a state.State for comparison.
 func (b *Backup) ToState() *state.State {
 	return &state.State{
-		Sources:    b.State.Sources,
-		Plugins:    b.State.Plugins,
-		MCPServers: b.State.MCPServers,
+		Marketplaces: b.State.Marketplaces,
+		Plugins:      b.State.Plugins,
+		MCPServers:   b.State.MCPServers,
 	}
 }
 

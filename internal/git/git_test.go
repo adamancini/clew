@@ -263,27 +263,22 @@ func TestCheckRepositoryNoRemoteTracking(t *testing.T) {
 }
 
 func TestCheckClewfile(t *testing.T) {
-	// NOTE: As of v0.7.0, CheckClewfile no longer checks git status since
-	// local sources are not supported. This test verifies it returns empty results.
+	// NOTE: As of v0.8.0, CheckClewfile no longer checks git status since
+	// marketplaces are remote repositories. This test verifies it returns empty results.
 	mock := NewMockCommandRunner()
 
 	// Git is available
 	mock.AddCommand("", "git --version", []byte("git version 2.40.0"), nil)
 
 	clewfile := &config.Clewfile{
-		Sources: []config.Source{
-			{
-				Name: "github-marketplace",
-				Kind: config.SourceKindMarketplace,
-				Source: config.SourceConfig{
-					Type: config.SourceTypeGitHub,
-					URL:  "anthropics/claude-plugins-official",
-				},
+		Marketplaces: map[string]config.Marketplace{
+			"official": {
+				Repo: "anthropics/claude-plugins-official",
 			},
 		},
 		Plugins: []config.Plugin{
 			{
-				Name: "plugin@github-marketplace",
+				Name: "plugin@official",
 			},
 		},
 	}
@@ -297,13 +292,13 @@ func TestCheckClewfile(t *testing.T) {
 	}
 
 	// Should have no skips
-	if result.ShouldSkipSource("github-marketplace") {
-		t.Error("Should not skip github marketplace")
+	if result.ShouldSkipMarketplace("official") {
+		t.Error("Should not skip marketplace")
 	}
 }
 
 func TestCheckClewfileGitNotAvailable(t *testing.T) {
-	// NOTE: As of v0.7.0, CheckClewfile no longer checks git status.
+	// NOTE: As of v0.8.0, CheckClewfile no longer checks git status.
 	// This test verifies graceful handling when git is unavailable.
 	mock := NewMockCommandRunner()
 
@@ -311,14 +306,9 @@ func TestCheckClewfileGitNotAvailable(t *testing.T) {
 	mock.AddCommand("", "git --version", nil, errors.New("git not found"))
 
 	clewfile := &config.Clewfile{
-		Sources: []config.Source{
-			{
-				Name: "github-marketplace",
-				Kind: config.SourceKindMarketplace,
-				Source: config.SourceConfig{
-					Type: config.SourceTypeGitHub,
-					URL:  "anthropics/claude-plugins-official",
-				},
+		Marketplaces: map[string]config.Marketplace{
+			"official": {
+				Repo: "anthropics/claude-plugins-official",
 			},
 		},
 	}

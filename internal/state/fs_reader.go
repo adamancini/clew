@@ -73,21 +73,15 @@ func (r *FilesystemReader) Read() (*State, error) {
 	}
 
 	state := &State{
-		Sources:    make(map[string]SourceState),
-		Plugins:    make(map[string]PluginState),
-		MCPServers: make(map[string]MCPServerState),
+		Marketplaces: make(map[string]MarketplaceState),
+		Plugins:      make(map[string]PluginState),
+		MCPServers:   make(map[string]MCPServerState),
 	}
 
-	// Read sources (marketplaces converted to sources)
-	if err := r.readSources(claudeDir, state); err != nil {
-		// Non-fatal, continue with empty sources
-		fmt.Fprintf(os.Stderr, "Warning: could not read sources: %v\n", err)
-	}
-
-	// Read plugin repositories from repos/ directory
-	if err := r.readPluginRepos(claudeDir, state); err != nil {
-		// Non-fatal, continue without plugin repos
-		fmt.Fprintf(os.Stderr, "Warning: could not read plugin repos: %v\n", err)
+	// Read marketplaces from known_marketplaces.json
+	if err := r.readMarketplaces(claudeDir, state); err != nil {
+		// Non-fatal, continue with empty marketplaces
+		fmt.Fprintf(os.Stderr, "Warning: could not read marketplaces: %v\n", err)
 	}
 
 	// Read plugins
@@ -113,44 +107,30 @@ func (r *FilesystemReader) Read() (*State, error) {
 	return state, nil
 }
 
-func (r *FilesystemReader) readSources(claudeDir string, state *State) error {
+func (r *FilesystemReader) readMarketplaces(claudeDir string, state *State) error {
 	path := filepath.Join(claudeDir, "plugins", "known_marketplaces.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil // No sources file is okay
+			return nil // No marketplaces file is okay
 		}
 		return err
 	}
 
-	// Read marketplace format and convert to sources
 	var marketplaces map[string]fsMarketplaceEntry
 	if err := json.Unmarshal(data, &marketplaces); err != nil {
 		return fmt.Errorf("failed to parse known_marketplaces.json: %w", err)
 	}
 
-	// Convert marketplaces to sources with kind="marketplace"
-	for name, m := range marketplaces {
-		source := SourceState{
-			Name:            name,
-			Kind:            types.SourceKindMarketplace.String(), // All items in known_marketplaces.json are marketplace kind
-			Type:            m.Source.Source,                      // github or local
+	for alias, m := range marketplaces {
+		state.Marketplaces[alias] = MarketplaceState{
+			Alias:           alias,
+			Repo:            m.Source.Repo,
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
-
-		// Set URL (only github sources are supported)
-		source.URL = m.Source.Repo
-
-		state.Sources[name] = source
 	}
 
-	return nil
-}
-
-func (r *FilesystemReader) readPluginRepos(claudeDir string, state *State) error {
-	// Local plugin repositories are no longer supported (removed in v0.7.0)
-	// This function is kept for backwards compatibility but does not read local plugins.
 	return nil
 }
 

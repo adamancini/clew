@@ -26,26 +26,16 @@ func newExportCmd() *cobra.Command {
 // ExportedClewfile represents the exported configuration in Clewfile format.
 // This is separate from config.Clewfile to allow for cleaner serialization.
 type ExportedClewfile struct {
-	Version    int                          `json:"version" yaml:"version"`
-	Sources    []ExportedSource             `json:"sources,omitempty" yaml:"sources,omitempty"`
-	Plugins    []ExportedPlugin             `json:"plugins,omitempty" yaml:"plugins,omitempty"`
-	MCPServers map[string]ExportedMCPServer `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
+	Version      int                           `json:"version" yaml:"version"`
+	Marketplaces map[string]ExportedMarketplace `json:"marketplaces,omitempty" yaml:"marketplaces,omitempty"`
+	Plugins      []ExportedPlugin              `json:"plugins,omitempty" yaml:"plugins,omitempty"`
+	MCPServers   map[string]ExportedMCPServer  `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
 }
 
-// ExportedSource represents a source for export.
-type ExportedSource struct {
-	Name   string              `json:"name" yaml:"name"`
-	Alias  string              `json:"alias,omitempty" yaml:"alias,omitempty"`
-	Kind   string              `json:"kind" yaml:"kind"`
-	Source ExportedSourceConfig `json:"source" yaml:"source"`
-}
-
-// ExportedSourceConfig represents source configuration for export.
-type ExportedSourceConfig struct {
-	Type string `json:"type" yaml:"type"`
-	URL  string `json:"url,omitempty" yaml:"url,omitempty"`
+// ExportedMarketplace represents a marketplace for export.
+type ExportedMarketplace struct {
+	Repo string `json:"repo" yaml:"repo"`
 	Ref  string `json:"ref,omitempty" yaml:"ref,omitempty"`
-	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 }
 
 // ExportedPlugin represents a plugin for export.
@@ -101,25 +91,21 @@ func runExport() error {
 // convertStateToClewfile converts the current state to a Clewfile structure.
 func convertStateToClewfile(s *state.State) *ExportedClewfile {
 	exported := &ExportedClewfile{
-		Version:    1,
-		Sources:    make([]ExportedSource, 0),
-		Plugins:    make([]ExportedPlugin, 0),
-		MCPServers: make(map[string]ExportedMCPServer),
+		Version:      1,
+		Marketplaces: make(map[string]ExportedMarketplace),
+		Plugins:      make([]ExportedPlugin, 0),
+		MCPServers:   make(map[string]ExportedMCPServer),
 	}
 
-	// Convert sources
-	for name, src := range s.Sources {
-		es := ExportedSource{
-			Name: name,
-			Kind: src.Kind,
-			Source: ExportedSourceConfig{
-				Type: src.Type,
-				URL:  src.URL,
-				Ref:  src.Ref,
-				Path: src.Path,
-			},
+	// Convert marketplaces
+	for alias, m := range s.Marketplaces {
+		em := ExportedMarketplace{
+			Repo: m.Repo,
 		}
-		exported.Sources = append(exported.Sources, es)
+		if m.Ref != "" {
+			em.Ref = m.Ref
+		}
+		exported.Marketplaces[alias] = em
 	}
 
 	// Convert plugins
@@ -139,24 +125,24 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		exported.Plugins = append(exported.Plugins, ep)
 	}
 
-	// Sort plugins by source name, then by plugin name for readability
+	// Sort plugins by marketplace name, then by plugin name for readability
 	sort.Slice(exported.Plugins, func(i, j int) bool {
-		iSource := ""
-		jSource := ""
+		iMarketplace := ""
+		jMarketplace := ""
 
-		// Extract source name from plugin name (part after @)
+		// Extract marketplace name from plugin name (part after @)
 		if strings.Contains(exported.Plugins[i].Name, "@") {
 			parts := strings.SplitN(exported.Plugins[i].Name, "@", 2)
-			iSource = parts[1]
+			iMarketplace = parts[1]
 		}
 		if strings.Contains(exported.Plugins[j].Name, "@") {
 			parts := strings.SplitN(exported.Plugins[j].Name, "@", 2)
-			jSource = parts[1]
+			jMarketplace = parts[1]
 		}
 
-		// Sort by source first
-		if iSource != jSource {
-			return iSource < jSource
+		// Sort by marketplace first
+		if iMarketplace != jMarketplace {
+			return iMarketplace < jMarketplace
 		}
 
 		// Then by plugin name
@@ -185,8 +171,8 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 	}
 
 	// Clean up empty slices/maps for nicer output
-	if len(exported.Sources) == 0 {
-		exported.Sources = nil
+	if len(exported.Marketplaces) == 0 {
+		exported.Marketplaces = nil
 	}
 	if len(exported.Plugins) == 0 {
 		exported.Plugins = nil

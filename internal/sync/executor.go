@@ -2,41 +2,13 @@
 package sync
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/types"
 )
-
-// localPluginJSON represents the structure of a plugin.json file.
-type localPluginJSON struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Description string `json:"description,omitempty"`
-}
-
-// installedPluginsFile represents the structure of installed_plugins.json.
-type installedPluginsFile struct {
-	Version int                            `json:"version"`
-	Plugins map[string][]pluginInstallInfo `json:"plugins"`
-}
-
-// pluginInstallInfo represents a single plugin installation entry.
-type pluginInstallInfo struct {
-	Scope        string `json:"scope"`
-	ProjectPath  string `json:"projectPath,omitempty"`
-	InstallPath  string `json:"installPath"`
-	Version      string `json:"version"`
-	InstalledAt  string `json:"installedAt"`
-	LastUpdated  string `json:"lastUpdated"`
-	GitCommitSha string `json:"gitCommitSha,omitempty"`
-}
 
 // CommandRunner is an interface for running external commands.
 // This allows for mocking in tests.
@@ -52,41 +24,30 @@ func (r *DefaultCommandRunner) Run(name string, args ...string) ([]byte, error) 
 	return cmd.CombinedOutput()
 }
 
-// addSource executes `claude plugin marketplace add <source>` for marketplace-kind sources.
-func (s *Syncer) addSource(src diff.SourceDiff) (Operation, error) {
+// addMarketplace executes `claude plugin marketplace add <repo>`.
+func (s *Syncer) addMarketplace(m diff.MarketplaceDiff) (Operation, error) {
 	op := Operation{
-		Type:   "source",
-		Name:   src.Name,
+		Type:   "marketplace",
+		Name:   m.Alias,
 		Action: "add",
 	}
 
-	if src.Desired == nil {
+	if m.Desired == nil {
 		op.Success = false
-		op.Error = fmt.Sprintf("no desired state for source %s", src.Name)
-		return op, fmt.Errorf("no desired state for source %s", src.Name)
+		op.Error = fmt.Sprintf("no desired state for marketplace %s", m.Alias)
+		return op, fmt.Errorf("no desired state for marketplace %s", m.Alias)
 	}
 
-	// Both marketplace and plugin kinds can be added via CLI
-	// (both are GitHub repos, just different structure)
-	if !src.Desired.Kind.IsMarketplace() && !src.Desired.Kind.IsPlugin() {
-		op.Success = true
-		op.Skipped = true
-		op.Description = fmt.Sprintf("Skip unsupported source kind (%s): %s", src.Desired.Kind, src.Name)
-		return op, nil
-	}
-
-	// Only github sources are supported
-	source := src.Desired.Source.URL
-	op.Description = fmt.Sprintf("Add GitHub source: %s", source)
+	op.Description = fmt.Sprintf("Add marketplace: %s (%s)", m.Alias, m.Desired.Repo)
 
 	// Build command string before executing
-	op.Command = fmt.Sprintf("claude plugin marketplace add %s", source)
+	op.Command = fmt.Sprintf("claude plugin marketplace add %s", m.Desired.Repo)
 
-	output, err := s.runner.Run("claude", "plugin", "marketplace", "add", source)
+	output, err := s.runner.Run("claude", "plugin", "marketplace", "add", m.Desired.Repo)
 	if err != nil {
 		op.Success = false
-		op.Error = fmt.Sprintf("failed to add source %s: %v\nOutput: %s", src.Name, err, string(output))
-		return op, fmt.Errorf("failed to add source %s: %w\nOutput: %s", src.Name, err, string(output))
+		op.Error = fmt.Sprintf("failed to add marketplace %s: %v\nOutput: %s", m.Alias, err, string(output))
+		return op, fmt.Errorf("failed to add marketplace %s: %w\nOutput: %s", m.Alias, err, string(output))
 	}
 
 	op.Success = true
@@ -245,179 +206,4 @@ func (s *Syncer) addMCPServer(m diff.MCPServerDiff) (Operation, error) {
 	return op, nil
 }
 
-// installLocalPlugin installs a local repository plugin by directly editing installed_plugins.json.
-// This is used for plugins that are cloned into ~/.claude/plugins/repos/ and don't use the marketplace.
-func (s *Syncer) installLocalPlugin(p diff.PluginDiff) (Operation, error) {
-	op := Operation{
-		Type:   "plugin",
-		Name:   p.Name,
-		Action: "add",
-	}
-
-	if p.Desired == nil {
-		op.Success = false
-		op.Error = fmt.Sprintf("no desired state for local plugin %s", p.Name)
-		return op, fmt.Errorf("no desired state for local plugin %s", p.Name)
-	}
-
-	if p.Desired.Source == nil {
-		op.Success = false
-		op.Error = fmt.Sprintf("local plugin %s requires source configuration", p.Name)
-		return op, fmt.Errorf("local plugin %s requires source configuration", p.Name)
-	}
-
-	// Expand the path (handle ~)
-	pluginPath := expandPath(p.Desired.Source.Path)
-	op.Description = fmt.Sprintf("Install local plugin: %s from %s", p.Name, pluginPath)
-
-	// Read plugin.json to get version
-	version, err := s.readPluginVersion(pluginPath)
-	if err != nil {
-		op.Success = false
-		op.Error = fmt.Sprintf("failed to read plugin.json for %s: %v", p.Name, err)
-		return op, fmt.Errorf("failed to read plugin.json for %s: %w", p.Name, err)
-	}
-
-	// Get git commit SHA
-	gitSha := s.getGitCommitSha(pluginPath)
-
-	// Determine scope using type's Default method
-	scope := types.Scope(p.Desired.Scope).Default().String()
-
-	// Update installed_plugins.json
-	if err := s.updateInstalledPlugins(p.Name, pluginPath, version, gitSha, scope); err != nil {
-		op.Success = false
-		op.Error = fmt.Sprintf("failed to update installed_plugins.json for %s: %v", p.Name, err)
-		return op, fmt.Errorf("failed to update installed_plugins.json for %s: %w", p.Name, err)
-	}
-
-	op.Command = fmt.Sprintf("Edit installed_plugins.json: add %s (version: %s, sha: %s)", p.Name, version, gitSha)
-	op.Success = true
-	return op, nil
-}
-
-// readPluginVersion reads the version from plugin.json in the plugin directory.
-func (s *Syncer) readPluginVersion(pluginPath string) (string, error) {
-	// Try plugin.json at root first
-	jsonPath := filepath.Join(pluginPath, "plugin.json")
-	data, err := s.editor.ReadFile(jsonPath)
-	if err != nil {
-		// Try .claude-plugin/plugin.json as fallback
-		jsonPath = filepath.Join(pluginPath, ".claude-plugin", "plugin.json")
-		data, err = s.editor.ReadFile(jsonPath)
-		if err != nil {
-			return "", fmt.Errorf("plugin.json not found: %w", err)
-		}
-	}
-
-	var plugin localPluginJSON
-	if err := json.Unmarshal(data, &plugin); err != nil {
-		return "", fmt.Errorf("failed to parse plugin.json: %w", err)
-	}
-
-	if plugin.Version == "" {
-		return "0.0.0", nil // Default version if not specified
-	}
-
-	return plugin.Version, nil
-}
-
-// getGitCommitSha returns the current git commit SHA for the plugin repository.
-func (s *Syncer) getGitCommitSha(pluginPath string) string {
-	cmd := exec.Command("git", "log", "-1", "--format=%H")
-	cmd.Dir = pluginPath
-	output, err := cmd.Output()
-	if err != nil {
-		return "" // Return empty string if not a git repo or git fails
-	}
-	return strings.TrimSpace(string(output))
-}
-
-// updateInstalledPlugins adds or updates a plugin entry in installed_plugins.json.
-func (s *Syncer) updateInstalledPlugins(name, installPath, version, gitSha, scope string) error {
-	installedPath := filepath.Join(s.claudeDir, "plugins", "installed_plugins.json")
-
-	// Read existing file or create new structure
-	var installed installedPluginsFile
-	data, err := s.editor.ReadFile(installedPath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("failed to read installed_plugins.json: %w", err)
-		}
-		// File doesn't exist, create new structure
-		installed = installedPluginsFile{
-			Version: 2,
-			Plugins: make(map[string][]pluginInstallInfo),
-		}
-	} else {
-		if err := json.Unmarshal(data, &installed); err != nil {
-			return fmt.Errorf("failed to parse installed_plugins.json: %w", err)
-		}
-	}
-
-	// Ensure plugins map exists
-	if installed.Plugins == nil {
-		installed.Plugins = make(map[string][]pluginInstallInfo)
-	}
-
-	now := time.Now().UTC().Format(time.RFC3339)
-
-	// Create new install entry
-	newEntry := pluginInstallInfo{
-		Scope:        scope,
-		InstallPath:  installPath,
-		Version:      version,
-		InstalledAt:  now,
-		LastUpdated:  now,
-		GitCommitSha: gitSha,
-	}
-
-	// For user scope, project path is empty
-	// For project scope, we'd need the current project path
-
-	// Check if plugin already exists
-	if existing, ok := installed.Plugins[name]; ok && len(existing) > 0 {
-		// Update existing entry - find matching scope or update first entry
-		found := false
-		for i, entry := range existing {
-			if entry.Scope == scope {
-				newEntry.InstalledAt = entry.InstalledAt // Preserve original install time
-				existing[i] = newEntry
-				found = true
-				break
-			}
-		}
-		if !found {
-			// Add new scope entry
-			installed.Plugins[name] = append([]pluginInstallInfo{newEntry}, existing...)
-		}
-	} else {
-		// Add new plugin
-		installed.Plugins[name] = []pluginInstallInfo{newEntry}
-	}
-
-	// Write back to file
-	output, err := json.MarshalIndent(installed, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal installed_plugins.json: %w", err)
-	}
-
-	if err := s.editor.WriteFile(installedPath, output, 0644); err != nil {
-		return fmt.Errorf("failed to write installed_plugins.json: %w", err)
-	}
-
-	return nil
-}
-
-// expandPath expands ~ to home directory.
-func expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return filepath.Join(home, path[2:])
-	}
-	return path
-}
 
