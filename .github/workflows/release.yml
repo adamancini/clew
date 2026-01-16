@@ -40,20 +40,30 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           {
-            echo "## Changelog"
-            echo ""
-            # Get previous tag to generate incremental changelog
-            PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || echo "")
-            if [ -n "$PREVIOUS_TAG" ]; then
-              echo "Changes since $PREVIOUS_TAG:"
+            # Extract version from tag (e.g., v0.8.0 -> 0.8.0)
+            VERSION="${TAG_NAME#v}"
+
+            # Extract changelog section for this version from CHANGELOG.md
+            if [ -f CHANGELOG.md ]; then
+              echo "## Changelog"
               echo ""
-              git log --oneline "$PREVIOUS_TAG".."$TAG_NAME"
+              # Extract content between ## [$VERSION] and next ## [
+              awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md
+              echo ""
             else
-              echo "Initial release"
+              echo "## Changelog"
               echo ""
-              git log --oneline "$TAG_NAME"
+              PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$TAG_NAME^" 2>/dev/null || echo "")
+              if [ -n "$PREVIOUS_TAG" ]; then
+                echo "Changes since $PREVIOUS_TAG:"
+                echo ""
+                git log --oneline "$PREVIOUS_TAG".."$TAG_NAME"
+              else
+                echo "Initial release"
+              fi
+              echo ""
             fi
-            echo ""
+
             echo "## Installation"
             echo ""
             echo "Download the binary for your platform:"
