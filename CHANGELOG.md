@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-01-16
+
+### Changed
+
+- Release workflow now includes both CHANGELOG content and git commit list in release notes
+- Provides better release documentation with migration guides and detailed commit history
+
 ## [0.8.0] - 2026-01-15
 
 ### Breaking Changes
