@@ -729,15 +729,15 @@ func TestCLIReaderVsFilesystemReader(t *testing.T) {
 			t.Errorf("plugin count mismatch: CLI=%d, filesystem=%d", len(cliPlugins), len(fsPlugins))
 		}
 
-		// Compare source counts
-		cliSources, cliOk := cliResult["sources"].([]interface{})
-		fsSources, fsOk := fsResult["sources"].([]interface{})
+		// Compare marketplace counts
+		cliMarketplaces, cliOk := cliResult["marketplaces"].(map[string]interface{})
+		fsMarketplaces, fsOk := fsResult["marketplaces"].(map[string]interface{})
 		if !cliOk || !fsOk {
-			t.Fatal("expected sources arrays in both outputs")
+			t.Fatal("expected marketplaces maps in both outputs")
 		}
 
-		if len(cliSources) != len(fsSources) {
-			t.Errorf("source count mismatch: CLI=%d, filesystem=%d", len(cliSources), len(fsSources))
+		if len(cliMarketplaces) != len(fsMarketplaces) {
+			t.Errorf("marketplace count mismatch: CLI=%d, filesystem=%d", len(cliMarketplaces), len(fsMarketplaces))
 		}
 	})
 
