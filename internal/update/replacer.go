@@ -31,26 +31,26 @@ func (r *BinaryReplacer) Replace(newBinary string) error {
 	// 2. Replace with new binary (atomic rename)
 	if err := os.Rename(newBinary, r.currentPath); err != nil {
 		// Attempt rollback
-		r.Rollback()
+		_ = r.Rollback()
 		return fmt.Errorf("failed to replace binary: %w", err)
 	}
 
 	// 3. Set executable permissions
 	if err := os.Chmod(r.currentPath, 0755); err != nil {
 		// Attempt rollback
-		r.Rollback()
+		_ = r.Rollback()
 		return fmt.Errorf("failed to set permissions: %w", err)
 	}
 
 	// 4. Verify new binary works
 	if err := r.verifyBinary(r.currentPath); err != nil {
 		// Rollback on verification failure
-		r.Rollback()
+		_ = r.Rollback()
 		return fmt.Errorf("new binary verification failed: %w", err)
 	}
 
 	// 5. Remove backup on success
-	os.Remove(r.backupPath)
+	_ = os.Remove(r.backupPath)
 
 	return nil
 }
@@ -87,7 +87,7 @@ func (r *BinaryReplacer) createBackup() error {
 	if err != nil {
 		return fmt.Errorf("failed to open current binary: %w", err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	// Get source file info for permissions
 	srcInfo, err := src.Stat()
@@ -100,11 +100,11 @@ func (r *BinaryReplacer) createBackup() error {
 	if err != nil {
 		return fmt.Errorf("failed to create backup file: %w", err)
 	}
-	defer dst.Close()
+	defer func() { _ = dst.Close() }()
 
 	// Copy contents
 	if _, err := io.Copy(dst, src); err != nil {
-		os.Remove(r.backupPath) // Clean up partial backup
+		_ = os.Remove(r.backupPath) // Clean up partial backup
 		return fmt.Errorf("failed to copy binary to backup: %w", err)
 	}
 

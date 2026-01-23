@@ -36,7 +36,7 @@ func (d *HTTPDownloader) Download(url string, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to download: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check status code
 	if resp.StatusCode != http.StatusOK {
@@ -48,13 +48,13 @@ func (d *HTTPDownloader) Download(url string, dst string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	// Copy the response body to the file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
 		// Clean up partial download
-		os.Remove(dst)
+		_ = os.Remove(dst)
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -96,7 +96,7 @@ func calculateSHA256(filepath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
@@ -113,7 +113,7 @@ func (d *HTTPDownloader) downloadChecksums(url string) (map[string]string, error
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("checksums download failed with status %d", resp.StatusCode)

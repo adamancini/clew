@@ -26,7 +26,7 @@ func TestHTTPDownloaderDownload_Success(t *testing.T) {
 	// Create mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(testContent)
+		_, _ = w.Write(testContent)
 	}))
 	defer server.Close()
 
@@ -94,7 +94,7 @@ func TestHTTPDownloaderDownload_NetworkError(t *testing.T) {
 func TestHTTPDownloaderDownload_InvalidDestination(t *testing.T) {
 	testContent := []byte("test")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(testContent)
+		_, _ = w.Write(testContent)
 	}))
 	defer server.Close()
 
@@ -147,7 +147,7 @@ def456  file2.bin
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(checksums))
+		_, _ = w.Write([]byte(checksums))
 	}))
 	defer server.Close()
 
@@ -196,7 +196,7 @@ onlyonefield
 789ghi  file3.bin`
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(checksums))
+		_, _ = w.Write([]byte(checksums))
 	}))
 	defer server.Close()
 
@@ -231,7 +231,7 @@ func TestVerifyChecksum_Success(t *testing.T) {
 	checksumsContent := fmt.Sprintf("%s  clew-darwin-arm64\n", expectedChecksum)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(checksumsContent))
+		_, _ = w.Write([]byte(checksumsContent))
 	}))
 	defer server.Close()
 
@@ -257,7 +257,7 @@ func TestVerifyChecksum_Mismatch(t *testing.T) {
 	checksumsContent := fmt.Sprintf("%s  clew-darwin-arm64\n", wrongChecksum)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(checksumsContent))
+		_, _ = w.Write([]byte(checksumsContent))
 	}))
 	defer server.Close()
 
@@ -285,7 +285,7 @@ func TestVerifyChecksum_FileNotInChecksums(t *testing.T) {
 	checksumsContent := "abc123  other-file.bin\n"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(checksumsContent))
+		_, _ = w.Write([]byte(checksumsContent))
 	}))
 	defer server.Close()
 
