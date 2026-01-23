@@ -54,6 +54,40 @@ curl -L https://github.com/adamancini/clew/releases/latest/download/clew-$(uname
   -o ~/.local/bin/clew && chmod +x ~/.local/bin/clew
 ```
 
+Once installed, you can keep clew up to date with `clew version --update`.
+
+## Auto-Update
+
+Clew can update itself to the latest version:
+
+```bash
+# Check for updates
+clew version --check
+
+# Install the latest version
+clew version --update
+```
+
+The update process:
+1. Checks GitHub releases for the latest version
+2. Downloads the appropriate binary for your platform
+3. Verifies the download with SHA256 checksums
+4. Creates a backup of your current binary
+5. Replaces the binary atomically
+6. Verifies the new binary works
+7. Automatically rolls back if anything fails
+
+**Supported platforms:** macOS (Intel/Apple Silicon), Linux (amd64/arm64)
+
+**Environment variables:**
+- `GITHUB_TOKEN` - Optional, prevents API rate limiting
+
+**Security:**
+- All downloads use HTTPS
+- SHA256 checksums always verified
+- Automatic rollback on verification failure
+- Backup created before any changes
+
 ## Quick Start
 
 ```bash
@@ -81,6 +115,12 @@ clew diff
 
 # Check status
 clew status
+
+# Check for clew updates
+clew version --check
+
+# Update clew to latest version
+clew version --update
 ```
 
 ### Create a Clewfile

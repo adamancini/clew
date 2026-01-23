@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-01-23
+
+### Added
+
+- **Auto-update functionality** - clew can now update itself
+  - New `version` subcommand for version information
+  - `clew version --check` - Check for updates without installing
+  - `clew version --update` - Download and install latest version
+  - Automatic platform detection (darwin/linux, amd64/arm64)
+  - SHA256 checksum verification for all downloads
+  - Safe binary replacement with automatic rollback
+  - Backup creation before updates
+  - GitHub token support via `GITHUB_TOKEN` environment variable
+- Semantic version parsing and comparison
+- GitHub releases API integration
+
+### Changed
+
+- Documentation updated with auto-update instructions
+- Added auto-update section to README.md
+- Updated CLAUDE.md with version command details
+
+### Security
+
+- All downloads use HTTPS
+- SHA256 checksums always verified before installation
+- Automatic rollback if verification fails
+- Backup always created before binary replacement
+
 ## [0.8.2] - 2026-01-22
 
 ### Fixed
