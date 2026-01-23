@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-01-23
+
+### Changed
+
+- Version check workflow now skips validation for non-code changes (GitHub Actions, documentation)
+- Allows workflow and documentation updates without requiring clew version bumps
+- Go module and code changes still require version bumps
+
 ## [0.9.0] - 2026-01-23
 
 ### Added

@@ -20,17 +20,61 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for tag comparison
 
+      - name: Check if non-code changes only
+        id: skip-check
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # Get list of changed files
+          git fetch origin "$BASE_REF"
+          CHANGED_FILES=$(git diff --name-only "origin/$BASE_REF"...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if only non-code files changed (these don't require version bumps)
+          SKIP=false
+
+          # GitHub Actions-only changes
+          if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+            if ! echo "$CHANGED_FILES" | grep -qv "^\.github/workflows/"; then
+              echo "skip_reason=github-actions-only" >> $GITHUB_OUTPUT
+              SKIP=true
+            fi
+          fi
+
+          # Documentation-only changes (.md files)
+          if [ "$SKIP" = "false" ]; then
+            if echo "$CHANGED_FILES" | grep -q "\.md$"; then
+              # Check if ALL files are .md files
+              if ! echo "$CHANGED_FILES" | grep -qv "\.md$"; then
+                echo "skip_reason=documentation-only" >> $GITHUB_OUTPUT
+                SKIP=true
+              fi
+            fi
+          fi
+
+          echo "skip=$SKIP" >> $GITHUB_OUTPUT
+
+      - name: Skip validation for non-code changes
+        if: steps.skip-check.outputs.skip == 'true'
+        run: |
+          echo "✓ Skipping version check for ${{ steps.skip-check.outputs.skip_reason }} changes"
+          echo "Non-code changes don't require version bumps"
+          exit 0
+
       - name: Install dependencies
+        if: steps.skip-check.outputs.skip != 'true'
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Run version validation
+        if: steps.skip-check.outputs.skip != 'true'
         id: validation
         run: |
           bash scripts/check-version-bump.sh
         continue-on-error: true
 
       - name: Comment on PR (if failed)
-        if: steps.validation.outcome == 'failure'
+        if: steps.validation.outcome == 'failure' && steps.skip-check.outputs.skip != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -42,5 +86,5 @@ jobs:
             })
 
       - name: Fail workflow if validation failed
-        if: steps.validation.outcome == 'failure'
+        if: steps.validation.outcome == 'failure' && steps.skip-check.outputs.skip != 'true'
         run: exit 1
