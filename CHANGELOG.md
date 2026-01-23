@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-01-22
+
+### Fixed
+
+- Updated e2e test `TestCLIReaderVsFilesystemReader` to check for `marketplaces` map instead of deprecated `sources` array, aligning with v0.8.0 schema simplification
+
 ## [0.8.1] - 2026-01-16
 
 ### Changed
