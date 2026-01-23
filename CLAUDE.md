@@ -109,6 +109,9 @@ The filesystem reader is now the default because it's more reliable and doesn't 
   - `restore` - restore from backup
   - `delete` - delete specific backup
   - `prune` - remove old backups
+- ✅ `clew version` - version information and auto-update
+  - `--check` - check for updates without installing
+  - `--update` - download and install latest version
 
 ### Features
 - ✅ Interactive mode (`-i/--interactive`) for sync and diff
@@ -128,6 +131,11 @@ The filesystem reader is now the default because it's more reliable and doesn't 
   - CHANGELOG.md in Keep a Changelog format
   - Branch protection for main branch
   - Semantic version validation
+- ✅ Self-update capability
+  - Check for updates via GitHub releases API
+  - Download and verify binaries with SHA256 checksums
+  - Safe binary replacement with automatic rollback
+  - Support for all platforms (darwin/linux, amd64/arm64)
 
 ### Plugin Integration
 - ✅ Claude Code plugin structure (`.claude-plugin/plugin.json`)
