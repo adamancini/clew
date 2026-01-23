@@ -2,6 +2,7 @@ package update
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,7 +49,7 @@ func TestGitHubCheckerCheckForUpdate_UpdateAvailable(t *testing.T) {
 			t.Error("Expected Accept header")
 		}
 
-		// Return mock release
+		// Return mock release with all platform assets
 		release := GitHubRelease{
 			TagName: "v0.9.0",
 			Name:    "v0.9.0",
@@ -61,6 +62,18 @@ func TestGitHubCheckerCheckForUpdate_UpdateAvailable(t *testing.T) {
 				{
 					Name:               "clew-darwin-arm64",
 					BrowserDownloadURL: "https://github.com/.../clew-darwin-arm64",
+				},
+				{
+					Name:               "clew-darwin-amd64",
+					BrowserDownloadURL: "https://github.com/.../clew-darwin-amd64",
+				},
+				{
+					Name:               "clew-linux-amd64",
+					BrowserDownloadURL: "https://github.com/.../clew-linux-amd64",
+				},
+				{
+					Name:               "clew-linux-arm64",
+					BrowserDownloadURL: "https://github.com/.../clew-linux-arm64",
 				},
 				{
 					Name:               "checksums.txt",
@@ -99,8 +112,11 @@ func TestGitHubCheckerCheckForUpdate_UpdateAvailable(t *testing.T) {
 		t.Errorf("ReleaseNotes = %s", info.ReleaseNotes)
 	}
 
-	if info.AssetURL != "https://github.com/.../clew-darwin-arm64" {
-		t.Errorf("AssetURL = %s", info.AssetURL)
+	// Verify AssetURL matches current platform
+	platform := Detect()
+	expectedAsset := fmt.Sprintf("https://github.com/.../clew-%s-%s", platform.OS, platform.Arch)
+	if info.AssetURL != expectedAsset {
+		t.Errorf("AssetURL = %s, want %s (platform: %s/%s)", info.AssetURL, expectedAsset, platform.OS, platform.Arch)
 	}
 
 	if info.ChecksumURL != "https://github.com/.../checksums.txt" {
