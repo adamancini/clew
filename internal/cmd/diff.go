@@ -10,6 +10,7 @@ import (
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/interactive"
 	"github.com/adamancini/clew/internal/output"
+	"github.com/adamancini/clew/internal/state"
 )
 
 func newDiffCmd() *cobra.Command {
@@ -60,7 +61,7 @@ func runDiff(interactiveMode bool, showCommands bool) error {
 	}
 
 	// 4. Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)

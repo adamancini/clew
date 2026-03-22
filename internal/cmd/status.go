@@ -9,6 +9,7 @@ import (
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/output"
+	"github.com/adamancini/clew/internal/state"
 )
 
 func newStatusCmd() *cobra.Command {
@@ -67,7 +68,7 @@ func runStatus() error {
 	}
 
 	// 4. Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)

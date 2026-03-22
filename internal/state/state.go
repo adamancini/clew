@@ -44,9 +44,6 @@ type Reader interface {
 	Read() (*State, error)
 }
 
-// CLIReader reads state by invoking claude CLI commands.
-type CLIReader struct{}
-
 // FilesystemReader reads state directly from Claude Code's files.
 type FilesystemReader struct {
 	ClaudeDir string // typically ~/.claude

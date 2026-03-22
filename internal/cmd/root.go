@@ -6,19 +6,17 @@ import (
 
 var (
 	// Global flags
-	outputFormat  string
-	configPath    string
-	useFilesystem bool
-	useCLI        bool
-	verbose       bool
-	quiet         bool
+	outputFormat string
+	configPath   string
+	verbose      bool
+	quiet        bool
 )
 
 func Execute(version, commit, date string) error {
 	rootCmd := &cobra.Command{
 		Use:   "clew",
 		Short: "Declarative Claude Code configuration management",
-		Long: `clew manages Claude Code plugins, marketplaces, and MCP servers declaratively.
+		Long: `clew manages Claude Code plugins and marketplaces declaratively.
 
 Define your desired configuration in a Clewfile, sync it across machines with clew sync.`,
 		Version: version,
@@ -28,9 +26,6 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	// Global flags
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "text", "Output format: text, json, yaml")
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "Path to Clewfile")
-	rootCmd.PersistentFlags().BoolVar(&useCLI, "cli", false, "Use claude CLI instead of filesystem (experimental, currently broken - see issue #34)")
-	rootCmd.PersistentFlags().BoolVarP(&useFilesystem, "filesystem", "f", false, "[DEPRECATED] Read state from filesystem (now default behavior)")
-	rootCmd.PersistentFlags().BoolVar(&useFilesystem, "read-from-filesystem", false, "[DEPRECATED] Read state from filesystem (now default behavior)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Quiet mode (errors only)")
 
@@ -42,8 +37,6 @@ Define your desired configuration in a Clewfile, sync it across machines with cl
 	rootCmd.AddCommand(newDiffCmd())
 	rootCmd.AddCommand(newExportCmd())
 	rootCmd.AddCommand(newStatusCmd())
-	rootCmd.AddCommand(newAddCmd())
-	rootCmd.AddCommand(newRemoveCmd())
 	rootCmd.AddCommand(newCompletionCmd())
 	rootCmd.AddCommand(newBackupCmd())
 	rootCmd.AddCommand(newVersionCmd())

@@ -57,7 +57,7 @@ type ExportedMCPServer struct {
 // runExport executes the export workflow.
 func runExport() error {
 	// 1. Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)

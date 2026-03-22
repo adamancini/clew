@@ -44,7 +44,7 @@ type SyncService struct {
 func NewSyncService(configPath, version string) *SyncService {
 	return &SyncService{
 		configPath:  configPath,
-		stateReader: getStateReader(),
+		stateReader: &state.FilesystemReader{},
 		syncer:      sync.NewSyncer(),
 		gitChecker:  git.NewChecker(),
 		version:     version,
