@@ -103,58 +103,13 @@ func runClew(t *testing.T, testDir string, args ...string) (string, string, erro
 	return stdout.String(), stderr.String(), err
 }
 
-// cliReaderWorks checks if the CLI reader is functional
-// Returns true if CLI reader works, false if it fails (issue #34)
-// Issue #34: The CLI reader tries to call `claude plugin list --json` but that command doesn't exist
-func cliReaderWorks(t *testing.T) bool {
-	t.Helper()
-
-	// The actual issue is that `claude plugin list` doesn't exist
-	// Check if the claude CLI has the list subcommand
-	cmd := exec.Command("claude", "plugin", "list", "--json")
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-
-	// If command fails, check why
-	if err != nil {
-		// Check if claude command doesn't exist at all (CI environment)
-		if strings.Contains(err.Error(), "executable file not found") ||
-		   strings.Contains(err.Error(), "command not found") {
-			return false
-		}
-
-		// Check if claude exists but list subcommand doesn't (issue #34)
-		stderrStr := stderr.String()
-		if strings.Contains(stderrStr, "unknown command") ||
-		   strings.Contains(stderrStr, "error: unknown") {
-			return false
-		}
-	}
-
-	// If command succeeded or failed for other reasons, assume CLI reader works
-	// The actual tests will verify functionality
-	return true
-}
-
-// skipIfCLIReaderBroken skips the test if CLI reader is not working yet
-func skipIfCLIReaderBroken(t *testing.T) {
-	t.Helper()
-
-	if !cliReaderWorks(t) {
-		t.Skip("Skipping: CLI reader not working yet (see issue #34)")
-	}
-}
-
 // TestExportCommand tests the export command functionality
 func TestExportCommand(t *testing.T) {
 	testDir, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	pluginsFile := filepath.Join(testDir, ".claude", "plugins", "installed_plugins.json")
-
 	t.Run("export with text output", func(t *testing.T) {
-		stdout, stderr, err := runClew(t, testDir, "export", "--filesystem", "--read-from-filesystem", pluginsFile)
+		stdout, stderr, err := runClew(t, testDir, "export")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -172,7 +127,7 @@ func TestExportCommand(t *testing.T) {
 	})
 
 	t.Run("export with JSON output", func(t *testing.T) {
-		stdout, stderr, err := runClew(t, testDir, "export", "--filesystem", "--output", "json", "--read-from-filesystem", pluginsFile)
+		stdout, stderr, err := runClew(t, testDir, "export", "--output", "json")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -196,7 +151,7 @@ func TestExportCommand(t *testing.T) {
 	})
 
 	t.Run("export with YAML output", func(t *testing.T) {
-		stdout, stderr, err := runClew(t, testDir, "export", "--filesystem", "--output", "yaml", "--read-from-filesystem", pluginsFile)
+		stdout, stderr, err := runClew(t, testDir, "export", "--output", "yaml")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -225,7 +180,7 @@ func TestStatusCommand(t *testing.T) {
 	}
 
 	t.Run("status in sync", func(t *testing.T) {
-		stdout, stderr, err := runClew(t, testDir, "status", "--config", clewfilePath, "--filesystem")
+		stdout, stderr, err := runClew(t, testDir, "status", "--config", clewfilePath)
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -246,7 +201,7 @@ func TestStatusCommand(t *testing.T) {
 			t.Fatalf("failed to write minimal Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "status", "--config", minimalPath, "--filesystem")
+		stdout, stderr, err := runClew(t, testDir, "status", "--config", minimalPath)
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -257,7 +212,7 @@ func TestStatusCommand(t *testing.T) {
 	})
 
 	t.Run("status JSON output", func(t *testing.T) {
-		stdout, stderr, err := runClew(t, testDir, "status", "--config", clewfilePath, "--filesystem", "--output", "json")
+		stdout, stderr, err := runClew(t, testDir, "status", "--config", clewfilePath, "--output", "json")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -288,7 +243,7 @@ func TestDiffCommand(t *testing.T) {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "diff", "--config", clewfilePath, "--filesystem")
+		stdout, stderr, err := runClew(t, testDir, "diff", "--config", clewfilePath)
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -308,7 +263,7 @@ func TestDiffCommand(t *testing.T) {
 			t.Fatalf("failed to write minimal Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "diff", "--config", minimalPath, "--filesystem")
+		stdout, stderr, err := runClew(t, testDir, "diff", "--config", minimalPath)
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -329,7 +284,7 @@ func TestDiffCommand(t *testing.T) {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "diff", "--config", clewfilePath, "--filesystem", "--output", "json")
+		stdout, stderr, err := runClew(t, testDir, "diff", "--config", clewfilePath, "--output", "json")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -356,7 +311,7 @@ func TestSyncCommand(t *testing.T) {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "sync", "--config", clewfilePath, "--filesystem")
+		stdout, stderr, err := runClew(t, testDir, "sync", "--config", clewfilePath)
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -376,7 +331,7 @@ func TestSyncCommand(t *testing.T) {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "sync", "--config", clewfilePath, "--filesystem", "--verbose")
+		stdout, stderr, err := runClew(t, testDir, "sync", "--config", clewfilePath, "--verbose")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -397,7 +352,7 @@ func TestSyncCommand(t *testing.T) {
 			t.Fatalf("failed to write Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "sync", "--config", clewfilePath, "--filesystem", "--short")
+		stdout, stderr, err := runClew(t, testDir, "sync", "--config", clewfilePath, "--short")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -419,7 +374,7 @@ func TestSyncCommand(t *testing.T) {
 			t.Fatalf("failed to write minimal Clewfile: %v", err)
 		}
 
-		stdout, stderr, err := runClew(t, testDir, "sync", "--config", minimalPath, "--filesystem", "--output", "json")
+		stdout, stderr, err := runClew(t, testDir, "sync", "--config", minimalPath, "--output", "json")
 		if err != nil {
 			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 		}
@@ -459,7 +414,7 @@ func TestValidation(t *testing.T) {
 			t.Fatalf("failed to write invalid Clewfile: %v", err)
 		}
 
-		_, stderr, err := runClew(t, testDir, "status", "--config", invalidPath, "--filesystem")
+		_, stderr, err := runClew(t, testDir, "status", "--config", invalidPath)
 		if err == nil {
 			t.Fatal("expected command to fail with missing repo")
 		}
@@ -511,8 +466,8 @@ func TestOutputFormats(t *testing.T) {
 
 	formats := []string{"text", "json", "yaml"}
 	commands := [][]string{
-		{"status", "--config", clewfilePath, "--filesystem"},
-		{"export", "--filesystem"},
+		{"status", "--config", clewfilePath},
+		{"export"},
 	}
 
 	for _, cmd := range commands {
@@ -561,7 +516,7 @@ func TestEmptyClewfile(t *testing.T) {
 	}
 
 	// Should not fail, but show everything needs attention
-	stdout, stderr, err := runClew(t, testDir, "diff", "--config", emptyPath, "--filesystem")
+	stdout, stderr, err := runClew(t, testDir, "diff", "--config", emptyPath)
 	if err != nil {
 		t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
 	}
@@ -572,218 +527,3 @@ func TestEmptyClewfile(t *testing.T) {
 	}
 }
 
-// TestCLIReader tests commands using the CLI reader (default mode)
-// These tests will be skipped until issue #34 is fixed
-// Once fixed, these tests will automatically start running and passing
-func TestCLIReader(t *testing.T) {
-	skipIfCLIReaderBroken(t)
-
-	t.Run("export without filesystem flag", func(t *testing.T) {
-		stdout, stderr, err := runClew(t, "", "export")
-		if err != nil {
-			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Should produce same output as filesystem reader
-		if !strings.Contains(stdout, "version: 1") {
-			t.Errorf("expected version in output, got: %s", stdout)
-		}
-		if !strings.Contains(stdout, "marketplaces:") {
-			t.Errorf("expected marketplaces in output, got: %s", stdout)
-		}
-	})
-
-	t.Run("status without filesystem flag", func(t *testing.T) {
-		// Create Clewfile in home directory
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Fatalf("failed to get home dir: %v", err)
-		}
-		claudeDir := filepath.Join(home, ".claude")
-		clewfilePath := filepath.Join(claudeDir, "Clewfile.yaml")
-
-		// Export current state to use as test Clewfile
-		stdout, _, err := runClew(t, "", "export", "--filesystem")
-		if err != nil {
-			t.Fatalf("failed to export: %v", err)
-		}
-
-		// Write exported config as Clewfile
-		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
-			t.Fatalf("failed to write Clewfile: %v", err)
-		}
-		defer func() { _ = os.Remove(clewfilePath) }()
-
-		// Test status without filesystem flag
-		stdout, stderr, err := runClew(t, "", "status")
-		if err != nil {
-			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Should report sync status
-		if !strings.Contains(stdout, "sync") {
-			t.Errorf("expected sync status in output, got: %s", stdout)
-		}
-	})
-
-	t.Run("diff without filesystem flag", func(t *testing.T) {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Fatalf("failed to get home dir: %v", err)
-		}
-		claudeDir := filepath.Join(home, ".claude")
-		clewfilePath := filepath.Join(claudeDir, "Clewfile.yaml")
-
-		// Export current state
-		stdout, _, err := runClew(t, "", "export", "--filesystem")
-		if err != nil {
-			t.Fatalf("failed to export: %v", err)
-		}
-
-		// Write as Clewfile
-		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
-			t.Fatalf("failed to write Clewfile: %v", err)
-		}
-		defer func() { _ = os.Remove(clewfilePath) }()
-
-		// Test diff without filesystem flag
-		stdout, stderr, err := runClew(t, "", "diff")
-		if err != nil {
-			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Should show changes or "in sync"
-		if stdout == "" {
-			t.Error("expected output from diff command")
-		}
-	})
-
-	t.Run("sync without filesystem flag", func(t *testing.T) {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Fatalf("failed to get home dir: %v", err)
-		}
-		claudeDir := filepath.Join(home, ".claude")
-		clewfilePath := filepath.Join(claudeDir, "Clewfile.yaml")
-
-		// Export current state
-		stdout, _, err := runClew(t, "", "export", "--filesystem")
-		if err != nil {
-			t.Fatalf("failed to export: %v", err)
-		}
-
-		// Write as Clewfile
-		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
-			t.Fatalf("failed to write Clewfile: %v", err)
-		}
-		defer func() { _ = os.Remove(clewfilePath) }()
-
-		// Test sync without filesystem flag (should be no-op if in sync)
-		stdout, stderr, err := runClew(t, "", "sync")
-		if err != nil {
-			t.Fatalf("command failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Should complete successfully
-		if stdout == "" {
-			t.Error("expected output from sync command")
-		}
-	})
-}
-
-// TestCLIReaderVsFilesystemReader compares CLI reader and filesystem reader outputs
-// This test will be skipped until issue #34 is fixed
-func TestCLIReaderVsFilesystemReader(t *testing.T) {
-	skipIfCLIReaderBroken(t)
-
-	t.Run("export outputs match", func(t *testing.T) {
-		// Get output from CLI reader
-		cliOutput, stderr, err := runClew(t, "", "export", "--output", "json")
-		if err != nil {
-			t.Fatalf("CLI reader failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Get output from filesystem reader
-		fsOutput, stderr, err := runClew(t, "", "export", "--filesystem", "--output", "json")
-		if err != nil {
-			t.Fatalf("filesystem reader failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Parse both outputs
-		var cliResult, fsResult map[string]interface{}
-		if err := json.Unmarshal([]byte(cliOutput), &cliResult); err != nil {
-			t.Fatalf("CLI output is not valid JSON: %v", err)
-		}
-		if err := json.Unmarshal([]byte(fsOutput), &fsResult); err != nil {
-			t.Fatalf("filesystem output is not valid JSON: %v", err)
-		}
-
-		// Compare plugin counts
-		cliPlugins, cliOk := cliResult["plugins"].([]interface{})
-		fsPlugins, fsOk := fsResult["plugins"].([]interface{})
-		if !cliOk || !fsOk {
-			t.Fatal("expected plugins arrays in both outputs")
-		}
-
-		if len(cliPlugins) != len(fsPlugins) {
-			t.Errorf("plugin count mismatch: CLI=%d, filesystem=%d", len(cliPlugins), len(fsPlugins))
-		}
-
-		// Compare marketplace counts
-		cliMarketplaces, cliOk := cliResult["marketplaces"].(map[string]interface{})
-		fsMarketplaces, fsOk := fsResult["marketplaces"].(map[string]interface{})
-		if !cliOk || !fsOk {
-			t.Fatal("expected marketplaces maps in both outputs")
-		}
-
-		if len(cliMarketplaces) != len(fsMarketplaces) {
-			t.Errorf("marketplace count mismatch: CLI=%d, filesystem=%d", len(cliMarketplaces), len(fsMarketplaces))
-		}
-	})
-
-	t.Run("status outputs match", func(t *testing.T) {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			t.Fatalf("failed to get home dir: %v", err)
-		}
-		claudeDir := filepath.Join(home, ".claude")
-		clewfilePath := filepath.Join(claudeDir, "Clewfile.yaml")
-
-		// Create test Clewfile
-		stdout, _, err := runClew(t, "", "export", "--filesystem")
-		if err != nil {
-			t.Fatalf("failed to export: %v", err)
-		}
-		if err := os.WriteFile(clewfilePath, []byte(stdout), 0644); err != nil {
-			t.Fatalf("failed to write Clewfile: %v", err)
-		}
-		defer func() { _ = os.Remove(clewfilePath) }()
-
-		// Get status from CLI reader
-		cliOutput, stderr, err := runClew(t, "", "status", "--output", "json")
-		if err != nil {
-			t.Fatalf("CLI reader failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Get status from filesystem reader
-		fsOutput, stderr, err := runClew(t, "", "status", "--filesystem", "--output", "json")
-		if err != nil {
-			t.Fatalf("filesystem reader failed: %v\nstderr: %s", err, stderr)
-		}
-
-		// Parse both outputs
-		var cliResult, fsResult map[string]interface{}
-		if err := json.Unmarshal([]byte(cliOutput), &cliResult); err != nil {
-			t.Fatalf("CLI output is not valid JSON: %v", err)
-		}
-		if err := json.Unmarshal([]byte(fsOutput), &fsResult); err != nil {
-			t.Fatalf("filesystem output is not valid JSON: %v", err)
-		}
-
-		// Compare sync status
-		if cliResult["in_sync"] != fsResult["in_sync"] {
-			t.Errorf("sync status mismatch: CLI=%v, filesystem=%v",
-				cliResult["in_sync"], fsResult["in_sync"])
-		}
-	})
-}
