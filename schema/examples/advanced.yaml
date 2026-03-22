@@ -32,11 +32,6 @@ plugins:
     enabled: true
     scope: user
 
-  # Extended form - project scope
-  - name: playwright@claude-plugins-official
-    enabled: false
-    scope: project
-
   # Local repository plugin (not from marketplace)
   # These are plugins cloned into ~/.claude/plugins/repos/
   # clew will directly edit installed_plugins.json instead of using claude CLI

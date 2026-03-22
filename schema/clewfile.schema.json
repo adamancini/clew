@@ -72,8 +72,8 @@
               },
               "scope": {
                 "type": "string",
-                "enum": ["user", "project"],
-                "description": "Installation scope (default: inferred from Clewfile location)"
+                "enum": ["user"],
+                "description": "Installation scope (clew 1.0 only supports user scope)"
               }
             },
             "additionalProperties": false

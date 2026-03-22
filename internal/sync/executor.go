@@ -70,10 +70,8 @@ func (s *Syncer) installPlugin(p diff.PluginDiff) (Operation, error) {
 
 	args := []string{"plugin", "install", p.Desired.Name}
 
-	// Add scope if specified
-	if p.Desired.Scope != "" {
-		args = append(args, "--scope", p.Desired.Scope)
-	}
+	// clew 1.0 always installs at user scope
+	args = append(args, "--scope", "user")
 
 	// Build command string before executing
 	op.Command = "claude " + strings.Join(args, " ")
