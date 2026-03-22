@@ -11,7 +11,7 @@
 //
 // Synced validation rules:
 //   - Marketplace repo: non-empty string (validateMarketplaces)
-//   - Plugin scopes: user, project (validatePlugin)
+//   - Plugin scopes: user only (validatePlugin)
 //   - Plugin name format: plugin@marketplace (validatePluginReferences)
 package config
 

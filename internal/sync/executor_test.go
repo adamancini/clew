@@ -278,6 +278,37 @@ func TestExecuteWithErrors(t *testing.T) {
 	}
 }
 
+func TestInstallPluginAlwaysUserScope(t *testing.T) {
+	syncer, mock := newMockSyncer()
+
+	// Even with empty scope, install should always include --scope user
+	p := diff.PluginDiff{
+		Name:   "test-plugin@marketplace",
+		Action: diff.ActionAdd,
+		Desired: &config.Plugin{
+			Name:  "test-plugin@marketplace",
+			Scope: "",
+		},
+	}
+
+	op, err := syncer.installPlugin(p)
+	if err != nil {
+		t.Fatalf("installPlugin() error = %v", err)
+	}
+
+	expected := "claude plugin install test-plugin@marketplace --scope user"
+	if mock.Commands[0] != expected {
+		t.Errorf("Command = %q, want %q", mock.Commands[0], expected)
+	}
+
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+	if op.Command != expected {
+		t.Errorf("Operation.Command = %q, want %q", op.Command, expected)
+	}
+}
+
 // MockFileEditor records file operations for testing.
 type MockFileEditor struct {
 	Files map[string][]byte

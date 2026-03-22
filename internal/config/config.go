@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/adamancini/clew/internal/types"
 )
@@ -19,8 +18,7 @@ type (
 
 // Scope constants - re-exported from types package.
 const (
-	ScopeUser    = types.ScopeUser
-	ScopeProject = types.ScopeProject
+	ScopeUser = types.ScopeUser
 )
 
 // Marketplace represents a plugin marketplace source.
@@ -148,27 +146,7 @@ func Load(path string) (*Clewfile, error) {
 }
 
 // InferScope determines the default scope based on Clewfile location.
-// Returns "user" for home directory locations, "project" otherwise.
+// clew 1.0 only supports user scope, so this always returns "user".
 func InferScope(clewfilePath string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		// If we can't determine home directory, default to project scope (safer)
-		return "project"
-	}
-
-	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
-	if xdgConfig == "" {
-		xdgConfig = filepath.Join(home, ".config")
-	}
-
-	dir := filepath.Dir(clewfilePath)
-
-	// If in home config directories, default to user scope
-	if dir == home || dir == filepath.Join(home, ".claude") ||
-		strings.HasPrefix(dir, xdgConfig+string(os.PathSeparator)) || dir == xdgConfig {
-		return "user"
-	}
-
-	// Otherwise, assume project scope
-	return "project"
+	return "user"
 }

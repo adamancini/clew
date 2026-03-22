@@ -86,9 +86,10 @@ func TestValidatePlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "valid with scope project",
-			plugin:  Plugin{Name: "test@marketplace", Scope: "project"},
-			wantErr: false,
+			name:        "project scope rejected",
+			plugin:      Plugin{Name: "test@marketplace", Scope: "project"},
+			wantErr:     true,
+			errContains: "clew 1.0 only supports user scope",
 		},
 		{
 			name:        "missing name",

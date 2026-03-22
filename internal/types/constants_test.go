@@ -1,19 +1,21 @@
 package types
 
 import (
+	"strings"
 	"testing"
 )
 
 func TestScopeValidate(t *testing.T) {
 	tests := []struct {
-		name    string
-		s       Scope
-		wantErr bool
+		name        string
+		s           Scope
+		wantErr     bool
+		errContains string
 	}{
-		{"user valid", ScopeUser, false},
-		{"project valid", ScopeProject, false},
-		{"empty valid (defaults allowed)", "", false},
-		{"invalid value", "global", true},
+		{"user valid", ScopeUser, false, ""},
+		{"project rejected", Scope("project"), true, "clew 1.0 only supports user scope"},
+		{"empty valid (defaults allowed)", "", false, ""},
+		{"invalid value", "global", true, "clew 1.0 only supports user scope"},
 	}
 
 	for _, tt := range tests {
@@ -21,6 +23,11 @@ func TestScopeValidate(t *testing.T) {
 			err := tt.s.Validate()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Scope.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && tt.errContains != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errContains) {
+					t.Errorf("Scope.Validate() error = %v, want error containing %q", err, tt.errContains)
+				}
 			}
 		})
 	}
@@ -32,7 +39,6 @@ func TestScopeString(t *testing.T) {
 		want string
 	}{
 		{ScopeUser, "user"},
-		{ScopeProject, "project"},
 	}
 
 	for _, tt := range tests {
@@ -48,15 +54,6 @@ func TestScopeHelpers(t *testing.T) {
 	if !ScopeUser.IsUser() {
 		t.Error("user.IsUser() should be true")
 	}
-	if ScopeUser.IsProject() {
-		t.Error("user.IsProject() should be false")
-	}
-	if !ScopeProject.IsProject() {
-		t.Error("project.IsProject() should be true")
-	}
-	if ScopeProject.IsUser() {
-		t.Error("project.IsUser() should be false")
-	}
 	// Empty scope defaults to user
 	var empty Scope
 	if !empty.IsUser() {
@@ -70,7 +67,6 @@ func TestScopeDefault(t *testing.T) {
 		want Scope
 	}{
 		{ScopeUser, ScopeUser},
-		{ScopeProject, ScopeProject},
 		{"", ScopeUser},
 	}
 
@@ -91,8 +87,8 @@ func TestParseScope(t *testing.T) {
 	}{
 		{"user", ScopeUser, false},
 		{"USER", ScopeUser, false},
-		{"project", ScopeProject, false},
-		{"PROJECT", ScopeProject, false},
+		{"project", "", true},
+		{"PROJECT", "", true},
 		{"", "", false}, // Empty is valid
 		{"invalid", "", true},
 	}
@@ -111,9 +107,22 @@ func TestParseScope(t *testing.T) {
 	}
 }
 
+func TestParseScopeProjectErrorMessage(t *testing.T) {
+	_, err := ParseScope("project")
+	if err == nil {
+		t.Fatal("ParseScope(\"project\") should return error")
+	}
+	if !strings.Contains(err.Error(), "clew 1.0 only supports user scope") {
+		t.Errorf("error = %q, want it to contain %q", err.Error(), "clew 1.0 only supports user scope")
+	}
+}
+
 func TestAllScopes(t *testing.T) {
 	scopes := AllScopes()
-	if len(scopes) != 2 {
-		t.Errorf("AllScopes() returned %d scopes, want 2", len(scopes))
+	if len(scopes) != 1 {
+		t.Errorf("AllScopes() returned %d scopes, want 1", len(scopes))
+	}
+	if scopes[0] != ScopeUser {
+		t.Errorf("AllScopes()[0] = %v, want %v", scopes[0], ScopeUser)
 	}
 }

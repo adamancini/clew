@@ -20,23 +20,21 @@ type Scope string
 const (
 	// ScopeUser indicates user-level scope (applies to all projects).
 	ScopeUser Scope = "user"
-	// ScopeProject indicates project-level scope (applies only to current project).
-	ScopeProject Scope = "project"
 )
 
 // AllScopes returns all valid scopes.
 func AllScopes() []Scope {
-	return []Scope{ScopeUser, ScopeProject}
+	return []Scope{ScopeUser}
 }
 
 // Validate checks if the Scope is a valid value.
-// Empty scope is considered valid (defaults to user scope typically).
+// Empty scope is considered valid (defaults to user scope).
 func (s Scope) Validate() error {
 	switch s {
-	case ScopeUser, ScopeProject, "":
+	case ScopeUser, "":
 		return nil
 	default:
-		return fmt.Errorf("invalid scope '%s' (must be user or project)", s)
+		return fmt.Errorf("invalid scope '%s': clew 1.0 only supports user scope", s)
 	}
 }
 
@@ -48,11 +46,6 @@ func (s Scope) String() string {
 // IsUser returns true if the scope is user.
 func (s Scope) IsUser() bool {
 	return s == ScopeUser || s == ""
-}
-
-// IsProject returns true if the scope is project.
-func (s Scope) IsProject() bool {
-	return s == ScopeProject
 }
 
 // Default returns the default scope if empty, otherwise returns the current scope.
