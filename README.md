@@ -4,7 +4,7 @@
 [![CodeQL](https://github.com/adamancini/clew/actions/workflows/codeql.yml/badge.svg)](https://github.com/adamancini/clew/actions/workflows/codeql.yml)
 [![codecov](https://codecov.io/gh/adamancini/clew/branch/main/graph/badge.svg)](https://codecov.io/gh/adamancini/clew)
 
-Declarative Claude Code configuration management - like Brewfile for Homebrew, but for Claude Code plugins, marketplaces, and MCP servers.
+Declarative Claude Code configuration management - like Brewfile for Homebrew, but for Claude Code plugins and marketplaces.
 
 ## The Problem
 
@@ -33,12 +33,6 @@ plugins:
   - superpowers@superpowers-marketplace
   - name: linear@claude-plugins-official
     enabled: false
-
-mcp_servers:
-  episodic-memory:
-    transport: stdio
-    command: npx
-    args: ["-y", "@anthropic/episodic-memory-mcp"]
 ```
 
 ## Installation
@@ -123,6 +117,18 @@ clew version --check
 clew version --update
 ```
 
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `clew sync` | Reconcile system to match Clewfile (with auto-backup) |
+| `clew diff` | Dry-run preview of changes |
+| `clew export` | Export current state to Clewfile format |
+| `clew status` | Show current configuration status |
+| `clew backup` | Backup and restore configuration |
+| `clew version` | Version information and auto-update |
+| `clew completion` | Shell completion (bash/zsh/fish) |
+
 ### Create a Clewfile
 
 **Option 1: Export from existing setup (recommended)**
@@ -142,8 +148,6 @@ marketplaces:
 plugins:
   - context7@claude-plugins-official
   - episodic-memory@claude-plugins-official
-
-mcp_servers: {}
 ```
 
 ### Interactive Mode
@@ -159,7 +163,7 @@ clew sync -i
 clew diff --interactive
 ```
 
-Interactive mode prompts for each marketplace, plugin, and MCP server change:
+Interactive mode prompts for each marketplace and plugin change:
 
 ```
 $ clew sync --interactive
@@ -176,17 +180,13 @@ Plugins:
     -> Disable linear@claude-plugins-official? [y/n/a/q] n
     - Skipped
 
-MCP Servers:
-  + filesystem (will add)
-    -> Add MCP server filesystem? [y/n/a/q] y
-
 Summary:
-  Will apply: 3 changes
+  Will apply: 2 changes
   Skipped: 1
 
 Proceed with sync? [y/n] y
 
-Installed: 3
+Installed: 2
 ```
 
 **Prompt options:**
@@ -205,12 +205,12 @@ By default, sync shows verbose output with commands and descriptions:
 $ clew sync
 
 Add: Installing plugin context7
-→ claude plugin install context7@claude-plugins-official
-✓ Success
+> claude plugin install context7@claude-plugins-official
+* Success
 
 Enable: Enabling plugin linear
-→ claude plugin enable linear@claude-plugins-official
-✓ Success
+> claude plugin enable linear@claude-plugins-official
+* Success
 
 Summary:
   Installed: 1
@@ -223,8 +223,8 @@ Use `--short` for concise one-line-per-item output:
 ```
 $ clew sync --short
 
-✓ context7 (plugin add)
-✓ linear (plugin enable)
+* context7 (plugin add)
+* linear (plugin enable)
 
 Summary: 1 installed, 1 updated
 ```
@@ -277,13 +277,12 @@ Backups are stored in `~/.cache/clew/backups/` as JSON files named with timestam
 Each backup contains:
 - Timestamp and optional note
 - clew version that created the backup
-- Complete state: marketplaces, plugins, and MCP servers
+- Complete state: marketplaces and plugins
 
 ### Flags
 
 ```bash
 -o, --output <format>       # Output: text (default), json, yaml
--f, --filesystem            # Read state from files instead of claude CLI
 -i, --interactive           # Interactive mode (sync/diff only)
 --config <path>             # Explicit Clewfile path
 --strict                    # Exit non-zero on any failure (sync only)
