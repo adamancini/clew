@@ -183,7 +183,7 @@ func printDiffResultText(result *diff.Result) {
 
 	// Summary
 	fmt.Println()
-	fmt.Printf("Summary: %d to add, %d to update, %d to remove, %d need attention\n",
+	fmt.Printf("Summary: %d to add, %d to update, %d to remove, %d unmanaged\n",
 		add, update, remove, attention)
 }
 

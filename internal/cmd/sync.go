@@ -107,17 +107,17 @@ func printSyncResultVerbose(result *sync.Result) {
 
 		// Print the command executed
 		if op.Command != "" {
-			fmt.Printf("\u2192 %s\n", op.Command)
+			fmt.Printf("-> %s\n", op.Command)
 		}
 
 		// Print success or failure
 		if op.Success {
-			fmt.Println("\u2713 Success")
+			fmt.Println("OK")
 		} else {
 			if op.Error != "" {
-				fmt.Printf("\u2717 Failed: %s\n", op.Error)
+				fmt.Printf("FAILED: %s\n", op.Error)
 			} else {
-				fmt.Println("\u2717 Failed")
+				fmt.Println("FAILED")
 			}
 		}
 
@@ -164,9 +164,9 @@ func printSyncResultShort(result *sync.Result) {
 	// Print each operation on one line
 	for _, op := range result.Operations {
 		if op.Success {
-			fmt.Printf("\u2713 %s (%s %s)\n", op.Name, op.Type, op.Action)
+			fmt.Printf("OK %s (%s %s)\n", op.Name, op.Type, op.Action)
 		} else {
-			fmt.Printf("\u2717 %s (%s %s)\n", op.Name, op.Type, op.Action)
+			fmt.Printf("FAILED %s (%s %s)\n", op.Name, op.Type, op.Action)
 			if op.Error != "" {
 				fmt.Printf("  Error: %s\n", op.Error)
 			}
