@@ -34,7 +34,6 @@ func newBackupCmd() *cobra.Command {
 Backups are stored in ~/.cache/clew/backups/ and include:
   - Installed marketplaces
   - Installed plugins and their enabled state
-  - MCP server configurations
 
 Use 'clew backup create' before making changes, and 'clew backup restore'
 to recover a previous configuration.`,

@@ -300,18 +300,18 @@ func TestPrintSyncResultVerbose_FailedOperations(t *testing.T) {
 				Failed:    1,
 				Operations: []sync.Operation{
 					{
-						Type:        "mcp",
-						Name:        "server1",
+						Type:        "plugin",
+						Name:        "broken-plugin",
 						Action:      "add",
-						Command:     "claude mcp add server1",
-						Description: "Adding MCP server server1",
+						Command:     "claude plugin install broken-plugin",
+						Description: "Adding plugin broken-plugin",
 						Success:     false,
 						Error:       "",
 					},
 				},
 			},
 			wantContains: []string{
-				"Add: Adding MCP server server1",
+				"Add: Adding plugin broken-plugin",
 				"✗ Failed",
 				"Failed: 1",
 			},

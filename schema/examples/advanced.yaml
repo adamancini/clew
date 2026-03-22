@@ -45,32 +45,3 @@ plugins:
     path: ~/.claude/plugins/repos/my-local-plugin
     enabled: true
     scope: user
-
-mcp_servers:
-  # stdio transport with environment variables
-  episodic-memory:
-    transport: stdio
-    command: npx
-    args: ["-y", "@anthropic/episodic-memory-mcp"]
-    env:
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-    scope: user
-
-  # stdio transport with direct binary
-  filesystem:
-    transport: stdio
-    command: /usr/local/bin/mcp-server-filesystem
-    args: ["--root", "/Users/ada/projects"]
-    scope: project
-
-  # http transport (OAuth - will be skipped during sync)
-  linear:
-    transport: http
-    url: https://mcp.linear.app/mcp
-
-  # sse transport (legacy - prefer http for new configurations)
-  legacy-events-server:
-    transport: sse
-    url: https://example.com/mcp/events
-    scope: user

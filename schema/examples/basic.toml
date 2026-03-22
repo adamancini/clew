@@ -13,11 +13,3 @@ plugins = [
   "superpowers@superpowers-marketplace",
   "episodic-memory@superpowers-marketplace"
 ]
-
-[mcp_servers.episodic-memory]
-transport = "stdio"
-command = "npx"
-args = ["-y", "@anthropic/episodic-memory-mcp"]
-
-[mcp_servers.episodic-memory.env]
-EMBEDDING_MODEL = "${EMBEDDING_MODEL:-text-embedding-3-small}"
