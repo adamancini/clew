@@ -181,29 +181,6 @@ func printDiffResultText(result *diff.Result) {
 		printDiffItem("plugin", p.Name, p.Action, p.Desired != nil, p.Current != nil)
 	}
 
-	// MCP Servers
-	hasMCPChanges := false
-	for _, m := range result.MCPServers {
-		if m.Action == diff.ActionNone {
-			continue
-		}
-		if !hasMCPChanges {
-			if hasMarketplaceChanges || hasPluginChanges {
-				fmt.Println()
-			}
-			fmt.Println("MCP Servers:")
-			hasMCPChanges = true
-		}
-		extra := ""
-		if m.RequiresOAuth {
-			extra = " (requires OAuth - manual setup needed)"
-		}
-		printDiffItem("mcp", m.Name, m.Action, m.Desired != nil, m.Current != nil)
-		if extra != "" {
-			fmt.Printf("    %s\n", extra)
-		}
-	}
-
 	// Summary
 	fmt.Println()
 	fmt.Printf("Summary: %d to add, %d to update, %d to remove, %d need attention\n",

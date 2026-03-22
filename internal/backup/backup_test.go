@@ -30,15 +30,6 @@ func TestManager_Create(t *testing.T) {
 				Enabled:     true,
 			},
 		},
-		MCPServers: map[string]state.MCPServerState{
-			"filesystem": {
-				Name:      "filesystem",
-				Transport: "stdio",
-				Command:   "npx",
-				Args:      []string{"-y", "@anthropic/mcp-server-filesystem"},
-				Scope:     "user",
-			},
-		},
 	}
 
 	// Test creating backup without note
@@ -64,9 +55,6 @@ func TestManager_Create(t *testing.T) {
 	if len(bak.State.Plugins) != 1 {
 		t.Errorf("Create() Plugins count = %v, want 1", len(bak.State.Plugins))
 	}
-	if len(bak.State.MCPServers) != 1 {
-		t.Errorf("Create() MCPServers count = %v, want 1", len(bak.State.MCPServers))
-	}
 
 	// Verify file was created
 	filename := bak.ID + ".json"
@@ -83,7 +71,6 @@ func TestManager_CreateWithNote(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	bak, err := manager.Create(currentState, "Before major update")
@@ -103,7 +90,6 @@ func TestManager_List(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	// Create multiple backups
@@ -162,7 +148,6 @@ func TestManager_Get(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	created, err := manager.Create(currentState, "Test backup")
@@ -191,7 +176,6 @@ func TestManager_GetLatest(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	_, err := manager.Create(currentState, "First")
@@ -244,7 +228,6 @@ func TestManager_Delete(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	bak, err := manager.Create(currentState, "To delete")
@@ -285,9 +268,6 @@ func TestBackup_ToState(t *testing.T) {
 			Plugins: map[string]state.PluginState{
 				"plugin": {Name: "plugin"},
 			},
-			MCPServers: map[string]state.MCPServerState{
-				"server": {Name: "server"},
-			},
 		},
 	}
 
@@ -298,9 +278,6 @@ func TestBackup_ToState(t *testing.T) {
 	}
 	if len(s.Plugins) != 1 {
 		t.Errorf("ToState() Plugins count = %v, want 1", len(s.Plugins))
-	}
-	if len(s.MCPServers) != 1 {
-		t.Errorf("ToState() MCPServers count = %v, want 1", len(s.MCPServers))
 	}
 }
 

@@ -197,125 +197,6 @@ func TestUpdatePluginStateDisable(t *testing.T) {
 	}
 }
 
-func TestAddMCPServerStdio(t *testing.T) {
-	syncer, mock := newMockSyncer()
-
-	m := diff.MCPServerDiff{
-		Name:   "filesystem",
-		Action: diff.ActionAdd,
-		Desired: &config.MCPServer{
-			Transport: "stdio",
-			Command:   "npx",
-			Args:      []string{"-y", "@modelcontextprotocol/server-filesystem", "/tmp"},
-		},
-	}
-
-	op, err := syncer.addMCPServer(m)
-	if err != nil {
-		t.Fatalf("addMCPServer() error = %v", err)
-	}
-
-	// Check the command was formed correctly
-	if len(mock.Commands) != 1 {
-		t.Fatalf("Expected 1 command, got %d", len(mock.Commands))
-	}
-
-	cmd := mock.Commands[0]
-	if !strings.Contains(cmd, "--transport stdio") {
-		t.Errorf("Command should contain --transport stdio: %s", cmd)
-	}
-	if !strings.Contains(cmd, "filesystem") {
-		t.Errorf("Command should contain server name: %s", cmd)
-	}
-	if !strings.Contains(cmd, "npx") {
-		t.Errorf("Command should contain npx: %s", cmd)
-	}
-
-	// Verify Operation struct
-	if op.Type != "mcp" {
-		t.Errorf("Operation.Type = %q, want %q", op.Type, "mcp")
-	}
-	if op.Name != "filesystem" {
-		t.Errorf("Operation.Name = %q, want %q", op.Name, "filesystem")
-	}
-	if op.Action != "add" {
-		t.Errorf("Operation.Action = %q, want %q", op.Action, "add")
-	}
-	if !op.Success {
-		t.Errorf("Operation.Success = %v, want true", op.Success)
-	}
-}
-
-func TestAddMCPServerHTTP(t *testing.T) {
-	syncer, mock := newMockSyncer()
-
-	m := diff.MCPServerDiff{
-		Name:   "sentry",
-		Action: diff.ActionAdd,
-		Desired: &config.MCPServer{
-			Transport: "http",
-			URL:       "https://mcp.sentry.dev/mcp",
-		},
-	}
-
-	op, err := syncer.addMCPServer(m)
-	if err != nil {
-		t.Fatalf("addMCPServer() error = %v", err)
-	}
-
-	cmd := mock.Commands[0]
-	if !strings.Contains(cmd, "--transport http") {
-		t.Errorf("Command should contain --transport http: %s", cmd)
-	}
-	if !strings.Contains(cmd, "https://mcp.sentry.dev/mcp") {
-		t.Errorf("Command should contain URL: %s", cmd)
-	}
-
-	// Verify Operation struct
-	if op.Type != "mcp" {
-		t.Errorf("Operation.Type = %q, want %q", op.Type, "mcp")
-	}
-	if op.Name != "sentry" {
-		t.Errorf("Operation.Name = %q, want %q", op.Name, "sentry")
-	}
-	if !op.Success {
-		t.Errorf("Operation.Success = %v, want true", op.Success)
-	}
-}
-
-func TestAddMCPServerWithEnv(t *testing.T) {
-	syncer, mock := newMockSyncer()
-
-	m := diff.MCPServerDiff{
-		Name:   "airtable",
-		Action: diff.ActionAdd,
-		Desired: &config.MCPServer{
-			Transport: "stdio",
-			Command:   "npx",
-			Args:      []string{"-y", "airtable-mcp-server"},
-			Env:       map[string]string{"AIRTABLE_API_KEY": "secret"},
-		},
-	}
-
-	op, err := syncer.addMCPServer(m)
-	if err != nil {
-		t.Fatalf("addMCPServer() error = %v", err)
-	}
-
-	cmd := mock.Commands[0]
-	if !strings.Contains(cmd, "--env AIRTABLE_API_KEY=secret") {
-		t.Errorf("Command should contain env var: %s", cmd)
-	}
-
-	// Verify Operation struct
-	if op.Type != "mcp" {
-		t.Errorf("Operation.Type = %q, want %q", op.Type, "mcp")
-	}
-	if !op.Success {
-		t.Errorf("Operation.Success = %v, want true", op.Success)
-	}
-}
-
 func TestExecuteFullSync(t *testing.T) {
 	syncer, _ := newMockSyncer()
 
@@ -344,19 +225,6 @@ func TestExecuteFullSync(t *testing.T) {
 				Action: diff.ActionEnable,
 			},
 		},
-		MCPServers: []diff.MCPServerDiff{
-			{
-				Name:          "oauth-server",
-				Action:        diff.ActionAdd,
-				RequiresOAuth: true,
-				Desired:       &config.MCPServer{Transport: "http", URL: "https://example.com"},
-			},
-			{
-				Name:    "stdio-server",
-				Action:  diff.ActionAdd,
-				Desired: &config.MCPServer{Transport: "stdio", Command: "cmd"},
-			},
-		},
 	}
 
 	result, err := syncer.Execute(d, Options{})
@@ -364,19 +232,18 @@ func TestExecuteFullSync(t *testing.T) {
 		t.Fatalf("Execute() error = %v", err)
 	}
 
-	// Should have executed: marketplace add, plugin install, plugin enable, mcp add
-	// OAuth server should be skipped
-	if result.Installed != 3 {
-		t.Errorf("Installed = %d, want 3", result.Installed)
+	// Should have executed: marketplace add, plugin install, plugin enable
+	if result.Installed != 2 {
+		t.Errorf("Installed = %d, want 2", result.Installed)
 	}
 	if result.Updated != 1 {
 		t.Errorf("Updated = %d, want 1", result.Updated)
 	}
-	if result.Skipped != 1 {
-		t.Errorf("Skipped = %d, want 1 (OAuth server)", result.Skipped)
+	if result.Skipped != 0 {
+		t.Errorf("Skipped = %d, want 0", result.Skipped)
 	}
-	if len(result.Attention) != 2 {
-		t.Errorf("Attention items = %d, want 2 (extra marketplace + OAuth server)", len(result.Attention))
+	if len(result.Attention) != 1 {
+		t.Errorf("Attention items = %d, want 1 (extra marketplace)", len(result.Attention))
 	}
 }
 
@@ -395,8 +262,7 @@ func TestExecuteWithErrors(t *testing.T) {
 				},
 			},
 		},
-		Plugins:    []diff.PluginDiff{},
-		MCPServers: []diff.MCPServerDiff{},
+		Plugins: []diff.PluginDiff{},
 	}
 
 	result, err := syncer.Execute(d, Options{})

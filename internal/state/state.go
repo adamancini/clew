@@ -5,7 +5,6 @@ package state
 type State struct {
 	Marketplaces map[string]MarketplaceState
 	Plugins      map[string]PluginState
-	MCPServers   map[string]MCPServerState
 }
 
 // MarketplaceState represents a marketplace's current state.
@@ -27,16 +26,6 @@ type PluginState struct {
 	InstallPath  string
 	IsLocal      bool   // True for local repository plugins (not marketplace)
 	GitCommitSha string // Git commit SHA for the plugin
-}
-
-// MCPServerState represents an MCP server's current state.
-type MCPServerState struct {
-	Name      string
-	Transport string
-	Command   string
-	Args      []string
-	URL       string
-	Scope     string
 }
 
 // Reader defines the interface for reading current state.

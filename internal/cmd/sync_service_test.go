@@ -21,8 +21,7 @@ func TestSyncServiceIsInSync(t *testing.T) {
 				Marketplaces: []diff.MarketplaceDiff{
 					{Alias: "official", Action: diff.ActionNone},
 				},
-				Plugins:    []diff.PluginDiff{},
-				MCPServers: []diff.MCPServerDiff{},
+				Plugins: []diff.PluginDiff{},
 			},
 			wantIn: true,
 		},
@@ -33,7 +32,6 @@ func TestSyncServiceIsInSync(t *testing.T) {
 				Plugins: []diff.PluginDiff{
 					{Name: "new-plugin", Action: diff.ActionAdd},
 				},
-				MCPServers: []diff.MCPServerDiff{},
 			},
 			wantIn: false,
 		},
@@ -44,7 +42,6 @@ func TestSyncServiceIsInSync(t *testing.T) {
 				Plugins: []diff.PluginDiff{
 					{Name: "plugin", Action: diff.ActionEnable},
 				},
-				MCPServers: []diff.MCPServerDiff{},
 			},
 			wantIn: false,
 		},
@@ -54,8 +51,7 @@ func TestSyncServiceIsInSync(t *testing.T) {
 				Marketplaces: []diff.MarketplaceDiff{
 					{Alias: "extra", Action: diff.ActionRemove},
 				},
-				Plugins:    []diff.PluginDiff{},
-				MCPServers: []diff.MCPServerDiff{},
+				Plugins: []diff.PluginDiff{},
 			},
 			wantIn: false,
 		},
@@ -86,7 +82,6 @@ func TestSyncServiceComputeDiff(t *testing.T) {
 	current := &state.State{
 		Marketplaces: map[string]state.MarketplaceState{},
 		Plugins:      map[string]state.PluginState{},
-		MCPServers:   map[string]state.MCPServerState{},
 	}
 
 	result := service.ComputeDiff(clewfile, current)
@@ -128,7 +123,6 @@ func TestSyncServiceGenerateCommands(t *testing.T) {
 				},
 			},
 		},
-		MCPServers: []diff.MCPServerDiff{},
 	}
 
 	commands := service.GenerateCommands(diffResult)
@@ -146,7 +140,6 @@ func TestSyncServiceFilterDiffByGitStatus(t *testing.T) {
 	diffResult := &diff.Result{
 		Marketplaces: []diff.MarketplaceDiff{{Alias: "marketplace"}},
 		Plugins:      []diff.PluginDiff{{Name: "plugin"}},
-		MCPServers:   []diff.MCPServerDiff{},
 	}
 
 	filtered := service.FilterDiffByGitStatus(diffResult, nil)

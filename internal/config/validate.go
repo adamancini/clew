@@ -13,8 +13,6 @@
 //   - Marketplace repo: non-empty string (validateMarketplaces)
 //   - Plugin scopes: user, project (validatePlugin)
 //   - Plugin name format: plugin@marketplace (validatePluginReferences)
-//   - MCP transports: stdio, http, sse (validateMCPServer)
-//   - MCP scopes: user, project (validateMCPServer)
 package config
 
 import (
@@ -55,13 +53,6 @@ func Validate(c *Clewfile) error {
 	// Validate plugins
 	for i, p := range c.Plugins {
 		if err := validatePlugin(i, p); err != nil {
-			errors = append(errors, err.Error())
-		}
-	}
-
-	// Validate MCP servers
-	for name, s := range c.MCPServers {
-		if err := validateMCPServer(name, s); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
@@ -136,42 +127,6 @@ func validatePlugin(index int, p Plugin) error {
 	if err := types.Scope(p.Scope).Validate(); err != nil {
 		return ValidationError{
 			Field:   fmt.Sprintf("plugins[%d].scope", index),
-			Message: err.Error(),
-		}
-	}
-
-	return nil
-}
-
-func validateMCPServer(name string, s MCPServer) error {
-	// Validate transport using the type's Validate method
-	transport := types.TransportType(s.Transport)
-	if err := transport.Validate(); err != nil {
-		return ValidationError{
-			Field:   fmt.Sprintf("mcp_servers.%s.transport", name),
-			Message: err.Error(),
-		}
-	}
-
-	// Validate transport-specific requirements using helper methods
-	if transport.RequiresCommand() && s.Command == "" {
-		return ValidationError{
-			Field:   fmt.Sprintf("mcp_servers.%s.command", name),
-			Message: "command is required for stdio transport",
-		}
-	}
-
-	if transport.RequiresURL() && s.URL == "" {
-		return ValidationError{
-			Field:   fmt.Sprintf("mcp_servers.%s.url", name),
-			Message: "url is required for http/sse transport",
-		}
-	}
-
-	// Validate scope using the type's Validate method
-	if err := types.Scope(s.Scope).Validate(); err != nil {
-		return ValidationError{
-			Field:   fmt.Sprintf("mcp_servers.%s.scope", name),
 			Message: err.Error(),
 		}
 	}

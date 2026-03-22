@@ -156,73 +156,6 @@ func TestValidatePlugin(t *testing.T) {
 	}
 }
 
-func TestValidateMCPServer(t *testing.T) {
-	tests := []struct {
-		name        string
-		server      MCPServer
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name:    "valid stdio",
-			server:  MCPServer{Transport: "stdio", Command: "/usr/bin/server"},
-			wantErr: false,
-		},
-		{
-			name:    "valid http",
-			server:  MCPServer{Transport: "http", URL: "http://localhost:8080"},
-			wantErr: false,
-		},
-		{
-			name:    "valid sse",
-			server:  MCPServer{Transport: "sse", URL: "http://localhost:8080/sse"},
-			wantErr: false,
-		},
-		{
-			name:        "missing transport",
-			server:      MCPServer{},
-			wantErr:     true,
-			errContains: "transport type is required",
-		},
-		{
-			name:        "stdio missing command",
-			server:      MCPServer{Transport: "stdio"},
-			wantErr:     true,
-			errContains: "command is required",
-		},
-		{
-			name:        "http missing url",
-			server:      MCPServer{Transport: "http"},
-			wantErr:     true,
-			errContains: "url is required",
-		},
-		{
-			name:        "invalid transport",
-			server:      MCPServer{Transport: "websocket"},
-			wantErr:     true,
-			errContains: "invalid transport",
-		},
-		{
-			name:        "invalid scope",
-			server:      MCPServer{Transport: "stdio", Command: "cmd", Scope: "global"},
-			wantErr:     true,
-			errContains: "invalid scope",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateMCPServer("test", tt.server)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateMCPServer() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if tt.wantErr && tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-				t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
-			}
-		})
-	}
-}
-
 func TestValidatePluginReferences(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -293,9 +226,6 @@ func TestValidateFull(t *testing.T) {
 		Plugins: []Plugin{
 			{Name: "test@official"},
 		},
-		MCPServers: map[string]MCPServer{
-			"fs": {Transport: "stdio", Command: "npx"},
-		},
 	}
 
 	if err := Validate(valid); err != nil {
@@ -309,9 +239,6 @@ func TestValidateFull(t *testing.T) {
 		},
 		Plugins: []Plugin{
 			{Name: ""}, // Missing name
-		},
-		MCPServers: map[string]MCPServer{
-			"bad": {Transport: ""}, // Missing transport
 		},
 	}
 

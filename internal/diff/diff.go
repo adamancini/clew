@@ -35,21 +35,10 @@ type PluginDiff struct {
 	Desired *config.Plugin
 }
 
-// MCPServerDiff represents the diff for an MCP server.
-type MCPServerDiff struct {
-	Name    string
-	Action  Action
-	Current *state.MCPServerState
-	Desired *config.MCPServer
-	// RequiresOAuth indicates the server needs manual OAuth setup
-	RequiresOAuth bool
-}
-
 // Result contains the complete diff between desired and current state.
 type Result struct {
 	Marketplaces []MarketplaceDiff
 	Plugins      []PluginDiff
-	MCPServers   []MCPServerDiff
 }
 
 // Compute calculates the diff between a Clewfile and current state.
@@ -76,20 +65,6 @@ func (r *Result) Summary() (add, update, remove, attention int) {
 		case ActionUpdate, ActionEnable, ActionDisable:
 			update++
 		case ActionRemove, ActionSkipGit:
-			attention++
-		}
-	}
-	for _, m := range r.MCPServers {
-		switch m.Action {
-		case ActionAdd:
-			if m.RequiresOAuth {
-				attention++
-			} else {
-				add++
-			}
-		case ActionUpdate:
-			update++
-		case ActionRemove:
 			attention++
 		}
 	}

@@ -29,7 +29,6 @@ type ExportedClewfile struct {
 	Version      int                           `json:"version" yaml:"version"`
 	Marketplaces map[string]ExportedMarketplace `json:"marketplaces,omitempty" yaml:"marketplaces,omitempty"`
 	Plugins      []ExportedPlugin              `json:"plugins,omitempty" yaml:"plugins,omitempty"`
-	MCPServers   map[string]ExportedMCPServer  `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
 }
 
 // ExportedMarketplace represents a marketplace for export.
@@ -43,15 +42,6 @@ type ExportedPlugin struct {
 	Name    string `json:"name" yaml:"name"`
 	Enabled *bool  `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Scope   string `json:"scope,omitempty" yaml:"scope,omitempty"`
-}
-
-// ExportedMCPServer represents an MCP server for export.
-type ExportedMCPServer struct {
-	Transport string   `json:"transport" yaml:"transport"`
-	Command   string   `json:"command,omitempty" yaml:"command,omitempty"`
-	Args      []string `json:"args,omitempty" yaml:"args,omitempty"`
-	URL       string   `json:"url,omitempty" yaml:"url,omitempty"`
-	Scope     string   `json:"scope,omitempty" yaml:"scope,omitempty"`
 }
 
 // runExport executes the export workflow.
@@ -94,7 +84,6 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		Version:      1,
 		Marketplaces: make(map[string]ExportedMarketplace),
 		Plugins:      make([]ExportedPlugin, 0),
-		MCPServers:   make(map[string]ExportedMCPServer),
 	}
 
 	// Convert marketplaces and track valid marketplace names
@@ -168,36 +157,12 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		return exported.Plugins[i].Name < exported.Plugins[j].Name
 	})
 
-	// Convert MCP servers
-	for name, m := range s.MCPServers {
-		em := ExportedMCPServer{
-			Transport: m.Transport,
-		}
-		switch m.Transport {
-		case "stdio":
-			em.Command = m.Command
-			if len(m.Args) > 0 {
-				em.Args = m.Args
-			}
-		case "http", "sse":
-			em.URL = m.URL
-		}
-		// Only include scope if not user (default)
-		if m.Scope != "" && m.Scope != "user" {
-			em.Scope = m.Scope
-		}
-		exported.MCPServers[name] = em
-	}
-
 	// Clean up empty slices/maps for nicer output
 	if len(exported.Marketplaces) == 0 {
 		exported.Marketplaces = nil
 	}
 	if len(exported.Plugins) == 0 {
 		exported.Plugins = nil
-	}
-	if len(exported.MCPServers) == 0 {
-		exported.MCPServers = nil
 	}
 
 	return exported

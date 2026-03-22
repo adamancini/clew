@@ -370,7 +370,6 @@ func backupToConfig(bak *backup.Backup) *config.Clewfile {
 		Version:      1,
 		Marketplaces: make(map[string]config.Marketplace),
 		Plugins:      []config.Plugin{},
-		MCPServers:   make(map[string]config.MCPServer),
 	}
 
 	// Convert marketplaces
@@ -395,17 +394,6 @@ func backupToConfig(bak *backup.Backup) *config.Clewfile {
 		clewfile.Plugins = append(clewfile.Plugins, plugin)
 	}
 
-	// Convert MCP servers
-	for name, m := range bak.State.MCPServers {
-		clewfile.MCPServers[name] = config.MCPServer{
-			Transport: m.Transport,
-			Command:   m.Command,
-			Args:      m.Args,
-			URL:       m.URL,
-			Scope:     m.Scope,
-		}
-	}
-
 	return clewfile
 }
 
@@ -425,12 +413,6 @@ func printRestoreDiff(result *diff.Result) {
 		printDiffLine(p.Action, "plugin", p.Name)
 	}
 
-	for _, m := range result.MCPServers {
-		if m.Action == diff.ActionNone {
-			continue
-		}
-		printDiffLine(m.Action, "mcp", m.Name)
-	}
 }
 
 // printDiffLine prints a single diff line with appropriate symbol.

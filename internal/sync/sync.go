@@ -10,7 +10,7 @@ import (
 
 // Operation represents a single sync operation performed.
 type Operation struct {
-	Type        string `json:"type"`            // "marketplace", "plugin", or "mcp"
+	Type        string `json:"type"`            // "marketplace" or "plugin"
 	Name        string `json:"name"`            // Item name
 	Action      string `json:"action"`          // "add", "enable", "disable"
 	Command     string `json:"command"`         // CLI command executed
@@ -168,29 +168,5 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 		}
 	}
 
-	// Process MCP servers
-	for _, m := range d.MCPServers {
-		switch m.Action {
-		case diff.ActionAdd:
-			if m.RequiresOAuth {
-				result.Attention = append(result.Attention, "mcp (oauth): "+m.Name)
-				result.Skipped++
-			} else {
-				op, err := s.addMCPServer(m)
-				result.Operations = append(result.Operations, op)
-				if err != nil {
-					result.Failed++
-					result.Errors = append(result.Errors, err)
-				} else {
-					result.Installed++
-				}
-			}
-		case diff.ActionRemove:
-			// Info only - don't remove
-			result.Attention = append(result.Attention, "mcp: "+m.Name)
-		}
-	}
-
 	return result, nil
 }
-

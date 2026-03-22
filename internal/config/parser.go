@@ -84,7 +84,6 @@ type rawClewfile struct {
 	Version      int                    `yaml:"version" toml:"version" json:"version"`
 	Marketplaces map[string]Marketplace `yaml:"marketplaces" toml:"marketplaces" json:"marketplaces"`
 	Plugins      []interface{}          `yaml:"plugins" toml:"plugins" json:"plugins"`
-	MCPServers   map[string]MCPServer   `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
 }
 
 // parsePlugins converts the flexible plugin format to Plugin structs.
@@ -187,15 +186,11 @@ func parse(content []byte, format Format) (*Clewfile, error) {
 		Version:      raw.Version,
 		Marketplaces: raw.Marketplaces,
 		Plugins:      plugins,
-		MCPServers:   raw.MCPServers,
 	}
 
 	// Initialize nil maps
 	if clewfile.Marketplaces == nil {
 		clewfile.Marketplaces = make(map[string]Marketplace)
-	}
-	if clewfile.MCPServers == nil {
-		clewfile.MCPServers = make(map[string]MCPServer)
 	}
 
 	return clewfile, nil
