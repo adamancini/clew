@@ -86,9 +86,16 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		Plugins:      make([]ExportedPlugin, 0),
 	}
 
-	// Convert marketplaces and track valid marketplace names
+	// Convert marketplaces and track valid marketplace names.
+	// Skip local/directory-sourced marketplaces (empty Repo) since they
+	// cannot be represented in a portable Clewfile.
 	validMarketplaces := make(map[string]bool)
+	var skippedMarketplaces []string
 	for alias, m := range s.Marketplaces {
+		if m.Repo == "" {
+			skippedMarketplaces = append(skippedMarketplaces, alias)
+			continue
+		}
 		em := ExportedMarketplace{
 			Repo: m.Repo,
 		}
@@ -97,6 +104,11 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		}
 		exported.Marketplaces[alias] = em
 		validMarketplaces[alias] = true
+	}
+	if len(skippedMarketplaces) > 0 {
+		sort.Strings(skippedMarketplaces)
+		fmt.Fprintf(os.Stderr, "Note: Skipped %d local marketplace(s) (no repo): %v\n",
+			len(skippedMarketplaces), skippedMarketplaces)
 	}
 
 	// Convert plugins, skipping those that reference non-existent marketplaces

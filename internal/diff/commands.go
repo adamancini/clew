@@ -83,9 +83,9 @@ func FormatCommands(commands []Command, includeComments bool) string {
 
 	for _, cmd := range commands {
 		if includeComments {
-			output.WriteString(fmt.Sprintf("# %s\n", cmd.Description))
+			fmt.Fprintf(&output, "# %s\n", cmd.Description)
 		}
-		output.WriteString(fmt.Sprintf("%s\n", cmd.Command))
+		fmt.Fprintf(&output, "%s\n", cmd.Command)
 		if includeComments {
 			output.WriteString("\n")
 		}
