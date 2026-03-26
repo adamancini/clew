@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -54,10 +55,18 @@ func runExport() error {
 		os.Exit(1)
 	}
 
-	// 2. Convert state to Clewfile structure
-	exported := convertStateToClewfile(currentState)
+	// 2. Resolve marketplaces directory for orphan detection
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting home directory: %v\n", err)
+		os.Exit(1)
+	}
+	marketplacesDir := filepath.Join(home, ".claude", "plugins", "marketplaces")
 
-	// 3. Output in the specified format
+	// 3. Convert state to Clewfile structure
+	exported := convertStateToClewfile(currentState, marketplacesDir)
+
+	// 4. Output in the specified format
 	format, err := output.ParseFormat(outputFormat)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -79,7 +88,9 @@ func runExport() error {
 }
 
 // convertStateToClewfile converts the current state to a Clewfile structure.
-func convertStateToClewfile(s *state.State) *ExportedClewfile {
+// marketplacesDir is the path to the marketplaces directory (e.g., ~/.claude/plugins/marketplaces)
+// used to verify that plugins still exist in their marketplace before exporting.
+func convertStateToClewfile(s *state.State, marketplacesDir string) *ExportedClewfile {
 	exported := &ExportedClewfile{
 		Version:      1,
 		Marketplaces: make(map[string]ExportedMarketplace),
@@ -112,14 +123,24 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 	}
 
 	// Convert plugins, skipping those that reference non-existent marketplaces
-	var skippedPlugins []string
+	// or whose directory no longer exists in the marketplace.
+	var skippedNoMarketplace []string // plugin references a marketplace not in exported state
+	var skippedOrphaned []string      // plugin's marketplace exists but plugin directory doesn't
 	for fullName, p := range s.Plugins {
 		// Parse plugin@marketplace format and check if marketplace exists
 		if parts := strings.SplitN(fullName, "@", 2); len(parts) == 2 {
+			pluginName := parts[0]
 			marketplace := parts[1]
 			if !validMarketplaces[marketplace] {
-				skippedPlugins = append(skippedPlugins, fullName)
+				skippedNoMarketplace = append(skippedNoMarketplace, fullName)
 				continue // Skip this plugin - marketplace not in exported state
+			}
+
+			// Check if the plugin directory actually exists in the marketplace
+			pluginDir := filepath.Join(marketplacesDir, marketplace, "plugins", pluginName)
+			if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
+				skippedOrphaned = append(skippedOrphaned, fullName)
+				continue // Skip this plugin - not found in marketplace directory
 			}
 		}
 
@@ -139,10 +160,15 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 	}
 
 	// Log skipped plugins to stderr
-	if len(skippedPlugins) > 0 {
-		sort.Strings(skippedPlugins) // Sort for consistent output
+	if len(skippedNoMarketplace) > 0 {
+		sort.Strings(skippedNoMarketplace)
 		fmt.Fprintf(os.Stderr, "Note: Skipped %d plugin(s) referencing non-marketplace sources: %v\n",
-			len(skippedPlugins), skippedPlugins)
+			len(skippedNoMarketplace), skippedNoMarketplace)
+	}
+	if len(skippedOrphaned) > 0 {
+		sort.Strings(skippedOrphaned)
+		fmt.Fprintf(os.Stderr, "Note: Skipped %d plugin(s) not found in marketplace directory: %v\n",
+			len(skippedOrphaned), skippedOrphaned)
 	}
 
 	// Sort plugins by marketplace name, then by plugin name for readability

@@ -229,7 +229,7 @@ func TestPrintSyncResultVerbose_SuccessfulOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"Items needing attention:",
+				"Unmanaged items:",
 				"mcp (oauth): notion",
 				"plugin: deprecated-plugin",
 			},
@@ -446,7 +446,7 @@ func TestPrintSyncResultShort_SuccessfulOperations(t *testing.T) {
 			},
 			wantContains: []string{
 				"OK plugin1 (plugin add)",
-				"Items needing attention:",
+				"Unmanaged items:",
 				"mcp (oauth): notion",
 			},
 		},

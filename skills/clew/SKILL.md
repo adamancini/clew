@@ -123,7 +123,7 @@ Present the sync results:
 - 1 plugin state updated
 - 0 failures
 
-Items needing attention:
+Unmanaged items:
 - **linear** MCP server: Requires OAuth. Run `/mcp` and select 'linear' to complete setup."
 
 ## Command Reference

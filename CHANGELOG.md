@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-03-26
+
+### Fixed
+- Sync output now says "Unmanaged items" instead of "Items needing attention"
+- Export skips plugins not found in marketplace directory with stderr warning
+
 ## [1.0.0] - 2026-03-22
 
 ### Removed
