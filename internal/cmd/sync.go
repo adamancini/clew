@@ -145,7 +145,7 @@ func printSyncResultVerbose(result *sync.Result) {
 	// TODO: Format git warnings from result.GitWarnings when issue #39 is implemented
 
 	if len(result.Attention) > 0 {
-		fmt.Println("\nItems needing attention:")
+		fmt.Println("\nUnmanaged items:")
 		for _, item := range result.Attention {
 			fmt.Printf("  - %s\n", item)
 		}
@@ -192,7 +192,7 @@ func printSyncResultShort(result *sync.Result) {
 	// TODO: Format git warnings from result.GitWarnings when issue #39 is implemented
 
 	if len(result.Attention) > 0 {
-		fmt.Println("\nItems needing attention:")
+		fmt.Println("\nUnmanaged items:")
 		for _, item := range result.Attention {
 			fmt.Printf("  - %s\n", item)
 		}
