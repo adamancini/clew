@@ -76,6 +76,19 @@ func setupTestEnv(t *testing.T) (string, func()) {
 		}
 	}
 
+	// Create marketplace plugin directories so export doesn't skip them as orphaned.
+	// These match the plugins in installed_plugins.json and their marketplace references.
+	marketplacePluginDirs := []string{
+		filepath.Join(pluginsDir, "marketplaces", "superpowers-marketplace", "plugins", "superpowers"),
+		filepath.Join(pluginsDir, "marketplaces", "claude-code-plugins", "plugins", "hookify"),
+		filepath.Join(pluginsDir, "marketplaces", "claude-code-plugins", "plugins", "plugin-dev"),
+	}
+	for _, dir := range marketplacePluginDirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatalf("failed to create marketplace plugin dir %s: %v", dir, err)
+		}
+	}
+
 	cleanup := func() {
 		_ = os.RemoveAll(tmpDir)
 	}
