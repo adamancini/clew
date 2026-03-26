@@ -161,9 +161,6 @@ func TestFilesystemReaderMissingFiles(t *testing.T) {
 	if len(state.Plugins) != 0 {
 		t.Errorf("Plugins should be empty, got %d", len(state.Plugins))
 	}
-	if len(state.MCPServers) != 0 {
-		t.Errorf("MCPServers should be empty, got %d", len(state.MCPServers))
-	}
 }
 
 func TestFilesystemReaderMalformedJSON(t *testing.T) {

@@ -14,7 +14,6 @@ func TestManager_Prune(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	// Create 5 backups
@@ -56,7 +55,6 @@ func TestManager_PruneNoOp(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	// Create 2 backups
@@ -89,7 +87,6 @@ func TestManager_PruneKeepZero(t *testing.T) {
 	currentState := &state.State{
 		Marketplaces: make(map[string]state.MarketplaceState),
 		Plugins:      make(map[string]state.PluginState),
-		MCPServers:   make(map[string]state.MCPServerState),
 	}
 
 	// Create 3 backups

@@ -25,7 +25,6 @@ type Backup struct {
 type BackupState struct {
 	Marketplaces map[string]state.MarketplaceState `json:"marketplaces"`
 	Plugins      map[string]state.PluginState      `json:"plugins"`
-	MCPServers   map[string]state.MCPServerState   `json:"mcp_servers"`
 }
 
 // BackupInfo provides summary information about a backup for listing.
@@ -95,7 +94,6 @@ func (m *Manager) Create(currentState *state.State, note string) (*Backup, error
 		State: BackupState{
 			Marketplaces: currentState.Marketplaces,
 			Plugins:      currentState.Plugins,
-			MCPServers:   currentState.MCPServers,
 		},
 	}
 
@@ -219,7 +217,6 @@ func (b *Backup) ToState() *state.State {
 	return &state.State{
 		Marketplaces: b.State.Marketplaces,
 		Plugins:      b.State.Plugins,
-		MCPServers:   b.State.MCPServers,
 	}
 }
 

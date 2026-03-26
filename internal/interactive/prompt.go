@@ -47,7 +47,6 @@ type Prompter struct {
 type Selection struct {
 	Marketplaces map[string]bool // alias -> approved
 	Plugins      map[string]bool // name -> approved
-	MCPServers   map[string]bool // name -> approved
 }
 
 // NewSelection creates an empty selection.
@@ -55,7 +54,6 @@ func NewSelection() *Selection {
 	return &Selection{
 		Marketplaces: make(map[string]bool),
 		Plugins:      make(map[string]bool),
-		MCPServers:   make(map[string]bool),
 	}
 }
 
@@ -181,32 +179,6 @@ func (p *Prompter) PromptForSelection(result *diff.Result) (*Selection, bool) {
 		}
 	}
 
-	// Process MCP servers
-	hasMCP := false
-	for _, m := range result.MCPServers {
-		if m.Action == diff.ActionNone || m.Action == diff.ActionRemove {
-			continue
-		}
-		if !hasMCP {
-			_, _ = fmt.Fprintln(p.out, "\nMCP Servers:")
-			hasMCP = true
-		}
-		approved, quit := p.promptMCPServer(m)
-		if quit {
-			return nil, false
-		}
-		selection.MCPServers[m.Name] = approved
-		if approved {
-			if m.Action == diff.ActionAdd {
-				willAdd++
-			} else {
-				willUpdate++
-			}
-		} else {
-			skipped++
-		}
-	}
-
 	// Show summary
 	_, _ = fmt.Fprintln(p.out, "\nSummary:")
 	_, _ = fmt.Fprintf(p.out, "  Will apply: %d changes\n", willAdd+willUpdate)
@@ -273,31 +245,6 @@ func (p *Prompter) promptPlugin(pl diff.PluginDiff) (approved bool, quit bool) {
 	}
 }
 
-// promptMCPServer prompts for a single MCP server action.
-func (p *Prompter) promptMCPServer(m diff.MCPServerDiff) (approved bool, quit bool) {
-	symbol, verb := actionSymbolVerb(m.Action)
-
-	extra := ""
-	if m.RequiresOAuth {
-		extra = " (requires OAuth - manual setup needed)"
-	}
-	_, _ = fmt.Fprintf(p.out, "  %s %s (will %s)%s\n", symbol, m.Name, verb, extra)
-
-	resp := p.prompt("    -> %s MCP server %s?", titleCase(verb), m.Name)
-	switch resp {
-	case ResponseYes:
-		return true, false
-	case ResponseNo:
-		_, _ = fmt.Fprintf(p.out, "    %s Skipped\n", skipSymbol)
-		return false, false
-	case ResponseQuit:
-		_, _ = fmt.Fprintln(p.out, "\nAborted.")
-		return false, true
-	default:
-		return true, false
-	}
-}
-
 // Symbols for output
 const (
 	addSymbol    = "+"
@@ -330,7 +277,6 @@ func FilterDiffBySelection(result *diff.Result, selection *Selection) *diff.Resu
 	filtered := &diff.Result{
 		Marketplaces: make([]diff.MarketplaceDiff, 0),
 		Plugins:      make([]diff.PluginDiff, 0),
-		MCPServers:   make([]diff.MCPServerDiff, 0),
 	}
 
 	for _, m := range result.Marketplaces {
@@ -347,14 +293,6 @@ func FilterDiffBySelection(result *diff.Result, selection *Selection) *diff.Resu
 			filtered.Plugins = append(filtered.Plugins, p)
 		} else if selection.Plugins[p.Name] {
 			filtered.Plugins = append(filtered.Plugins, p)
-		}
-	}
-
-	for _, m := range result.MCPServers {
-		if m.Action == diff.ActionNone || m.Action == diff.ActionRemove {
-			filtered.MCPServers = append(filtered.MCPServers, m)
-		} else if selection.MCPServers[m.Name] {
-			filtered.MCPServers = append(filtered.MCPServers, m)
 		}
 	}
 

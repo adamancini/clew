@@ -11,7 +11,6 @@ import (
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/state"
 	"github.com/adamancini/clew/internal/sync"
-	"github.com/adamancini/clew/internal/types"
 )
 
 // testSetup provides a common test environment.
@@ -111,7 +110,6 @@ func TestIntegration_LoadConfiguration(t *testing.T) {
 		wantErr          bool
 		wantMarketplaces int
 		wantPlugins      int
-		wantMCP          int
 	}{
 		{
 			name: "valid minimal clewfile",
@@ -125,7 +123,6 @@ plugins:
 			wantErr:          false,
 			wantMarketplaces: 1,
 			wantPlugins:      1,
-			wantMCP:          0,
 		},
 		{
 			name: "valid full clewfile",
@@ -137,26 +134,10 @@ plugins:
   - test-plugin@official
   - name: another-plugin@official
     enabled: false
-mcp_servers:
-  filesystem:
-    transport: stdio
-    command: npx
-    args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
 `,
 			wantErr:          false,
 			wantMarketplaces: 1,
 			wantPlugins:      2,
-			wantMCP:          1,
-		},
-		{
-			name: "invalid transport",
-			clewfile: `version: 1
-mcp_servers:
-  bad:
-    transport: websocket
-    url: ws://localhost
-`,
-			wantErr: true,
 		},
 	}
 
@@ -184,9 +165,6 @@ mcp_servers:
 			}
 			if len(clewfile.Plugins) != tt.wantPlugins {
 				t.Errorf("plugins count = %d, want %d", len(clewfile.Plugins), tt.wantPlugins)
-			}
-			if len(clewfile.MCPServers) != tt.wantMCP {
-				t.Errorf("MCP servers count = %d, want %d", len(clewfile.MCPServers), tt.wantMCP)
 			}
 		})
 	}
@@ -281,7 +259,6 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 			current: &state.State{
 				Marketplaces: map[string]state.MarketplaceState{},
 				Plugins:      map[string]state.PluginState{},
-				MCPServers:   map[string]state.MCPServerState{},
 			},
 			wantAdd:       1,
 			wantUpdate:    0,
@@ -302,7 +279,6 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 						Enabled: false,
 					},
 				},
-				MCPServers: map[string]state.MCPServerState{},
 			},
 			wantAdd:       0,
 			wantUpdate:    1,
@@ -321,7 +297,6 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 						Enabled: true,
 					},
 				},
-				MCPServers: map[string]state.MCPServerState{},
 			},
 			wantAdd:       0,
 			wantUpdate:    0,
@@ -342,7 +317,6 @@ func TestIntegration_ComputeDiff(t *testing.T) {
 						Enabled: true,
 					},
 				},
-				MCPServers: map[string]state.MCPServerState{},
 			},
 			wantAdd:       0,
 			wantUpdate:    0,
@@ -425,7 +399,6 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 						},
 					},
 				},
-				MCPServers: []diff.MCPServerDiff{},
 			},
 			wantInstalled: 2,
 			wantUpdated:   0,
@@ -448,7 +421,6 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 						},
 					},
 				},
-				MCPServers: []diff.MCPServerDiff{},
 			},
 			wantInstalled: 0,
 			wantUpdated:   1,
@@ -456,30 +428,6 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 			wantSkipped:   0,
 			wantAttention: 0,
 			wantCommands:  1,
-		},
-		{
-			name: "skip OAuth MCP server",
-			diffResult: &diff.Result{
-				Marketplaces: []diff.MarketplaceDiff{},
-				Plugins:      []diff.PluginDiff{},
-				MCPServers: []diff.MCPServerDiff{
-					{
-						Name:          "oauth-server",
-						Action:        diff.ActionAdd,
-						RequiresOAuth: true,
-						Desired: &config.MCPServer{
-							Transport: "http",
-							URL:       "https://example.com",
-						},
-					},
-				},
-			},
-			wantInstalled: 0,
-			wantUpdated:   0,
-			wantFailed:    0,
-			wantSkipped:   1,
-			wantAttention: 1,
-			wantCommands:  0,
 		},
 		{
 			name: "report extra items",
@@ -498,7 +446,6 @@ func TestIntegration_ExecuteSync(t *testing.T) {
 						Current: &state.PluginState{Name: "extra-plugin"},
 					},
 				},
-				MCPServers: []diff.MCPServerDiff{},
 			},
 			wantInstalled: 0,
 			wantUpdated:   0,
@@ -635,7 +582,6 @@ func TestIntegration_FilterDiffByGitStatus(t *testing.T) {
 				Action: diff.ActionAdd,
 			},
 		},
-		MCPServers: []diff.MCPServerDiff{},
 	}
 
 	// Manually mark some items as skipped due to git
@@ -706,25 +652,14 @@ func TestIntegration_GenerateCommands(t *testing.T) {
 				},
 			},
 		},
-		MCPServers: []diff.MCPServerDiff{
-			{
-				Name:   "filesystem",
-				Action: diff.ActionAdd,
-				Desired: &config.MCPServer{
-					Transport: types.TransportStdio.String(),
-					Command:   "npx",
-					Args:      []string{"-y", "@modelcontextprotocol/server-filesystem", "/tmp"},
-				},
-			},
-		},
 	}
 
 	commands := diffResult.GenerateCommands()
-	if len(commands) != 3 {
-		t.Errorf("commands count = %d, want 3", len(commands))
+	if len(commands) != 2 {
+		t.Errorf("commands count = %d, want 2", len(commands))
 	}
 
-	// Verify command order: marketplaces, plugins, MCP servers
+	// Verify command order: marketplaces, plugins
 	for i, cmd := range commands {
 		if cmd.Command == "" {
 			t.Errorf("command[%d] is empty", i)

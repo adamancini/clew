@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/adamancini/clew/internal/types"
 )
 
 // fsMarketplaceEntry represents a single marketplace in known_marketplaces.json.
@@ -43,24 +41,6 @@ type fsSettings struct {
 	EnabledPlugins map[string]bool `json:"enabledPlugins"`
 }
 
-// fsClaudeConfig represents the structure of ~/.claude.json.
-type fsClaudeConfig struct {
-	Projects map[string]fsProjectConfig `json:"projects"`
-}
-
-type fsProjectConfig struct {
-	MCPServers map[string]fsMCPServer `json:"mcpServers"`
-}
-
-type fsMCPServer struct {
-	Transport string            `json:"transport"`
-	Command   string            `json:"command,omitempty"`
-	Args      []string          `json:"args,omitempty"`
-	URL       string            `json:"url,omitempty"`
-	Env       map[string]string `json:"env,omitempty"`
-	Headers   map[string]string `json:"headers,omitempty"`
-}
-
 // Read implements Reader using filesystem access.
 func (r *FilesystemReader) Read() (*State, error) {
 	claudeDir := r.ClaudeDir
@@ -75,7 +55,6 @@ func (r *FilesystemReader) Read() (*State, error) {
 	state := &State{
 		Marketplaces: make(map[string]MarketplaceState),
 		Plugins:      make(map[string]PluginState),
-		MCPServers:   make(map[string]MCPServerState),
 	}
 
 	// Read marketplaces from known_marketplaces.json
@@ -94,14 +73,6 @@ func (r *FilesystemReader) Read() (*State, error) {
 	if err := r.readSettings(claudeDir, state); err != nil {
 		// Non-fatal, continue with default enabled state
 		fmt.Fprintf(os.Stderr, "Warning: could not read settings: %v\n", err)
-	}
-
-	// Read MCP servers - derive home from claudeDir to respect HOME env var
-	// claudeDir is ~/.claude, so home is parent directory
-	home := filepath.Dir(claudeDir)
-	if err := r.readMCPServers(home, state); err != nil {
-		// Non-fatal, continue with empty MCP servers
-		fmt.Fprintf(os.Stderr, "Warning: could not read MCP servers: %v\n", err)
 	}
 
 	return state, nil
@@ -207,38 +178,6 @@ func (r *FilesystemReader) readSettings(claudeDir string, state *State) error {
 		if plugin, ok := state.Plugins[name]; ok {
 			plugin.Enabled = enabled
 			state.Plugins[name] = plugin
-		}
-	}
-
-	return nil
-}
-
-func (r *FilesystemReader) readMCPServers(homeDir string, state *State) error {
-	path := filepath.Join(homeDir, ".claude.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // No claude.json file is okay
-		}
-		return err
-	}
-
-	var config fsClaudeConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse .claude.json: %w", err)
-	}
-
-	// Collect MCP servers from all projects
-	// For now, use homeDir project as user-scope servers
-	homeProject := config.Projects[homeDir]
-	for name, server := range homeProject.MCPServers {
-		state.MCPServers[name] = MCPServerState{
-			Name:      name,
-			Transport: server.Transport,
-			Command:   server.Command,
-			Args:      server.Args,
-			URL:       server.URL,
-			Scope:     types.ScopeUser.String(),
 		}
 	}
 

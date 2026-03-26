@@ -13,8 +13,7 @@
     ],
     "hookify@claude-code-plugins": [
       {
-        "scope": "project",
-        "projectPath": "/tmp/clew-test/project",
+        "scope": "user",
         "installPath": "/tmp/clew-test/.claude/plugins/cache/claude-code-plugins/hookify/0.1.0",
         "version": "0.1.0",
         "installedAt": "2025-11-21T05:23:42.218Z",

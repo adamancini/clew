@@ -3,7 +3,7 @@
   "$id": "https://raw.githubusercontent.com/adamancini/clew/main/schema/clewfile.schema.json",
   "$comment": "SYNC REQUIREMENT: This schema must stay in sync with internal/config/validate.go. When updating validation rules (enums, required fields, patterns), update both files. See CLAUDE.md 'Schema Maintenance' section.",
   "title": "Clewfile",
-  "description": "Declarative configuration for Claude Code plugins, marketplaces, and MCP servers",
+  "description": "Declarative configuration for Claude Code plugins and marketplaces",
   "type": "object",
   "required": ["version"],
   "properties": {
@@ -72,8 +72,8 @@
               },
               "scope": {
                 "type": "string",
-                "enum": ["user", "project"],
-                "description": "Installation scope (default: inferred from Clewfile location)"
+                "enum": ["user"],
+                "description": "Installation scope (clew 1.0 only supports user scope)"
               }
             },
             "additionalProperties": false
@@ -94,109 +94,6 @@
           }
         ]
       ]
-    },
-    "mcp_servers": {
-      "type": "object",
-      "description": "Model Context Protocol server configurations",
-      "additionalProperties": {
-        "type": "object",
-        "required": ["transport"],
-        "properties": {
-          "transport": {
-            "type": "string",
-            "enum": ["stdio", "http", "sse"],
-            "description": "MCP transport protocol. Note: 'sse' (Server-Sent Events) is a legacy transport; prefer 'http' for new configurations"
-          },
-          "command": {
-            "type": "string",
-            "description": "Command to execute (required for stdio transport)",
-            "examples": ["npx", "node", "/usr/local/bin/mcp-server"]
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Command arguments (for stdio transport)",
-            "examples": [["-y", "@anthropic/episodic-memory-mcp"]]
-          },
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "description": "Server URL (required for http transport)",
-            "examples": ["https://mcp.linear.app/mcp"]
-          },
-          "env": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "Environment variables (supports ${VAR} or ${VAR:-default} syntax)",
-            "examples": [
-              {
-                "EMBEDDING_MODEL": "${EMBEDDING_MODEL:-text-embedding-3-small}",
-                "API_KEY": "${API_KEY}"
-              }
-            ]
-          },
-          "headers": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "HTTP headers (for http transport)"
-          },
-          "scope": {
-            "type": "string",
-            "enum": ["user", "project"],
-            "description": "Configuration scope (default: inferred from Clewfile location)"
-          }
-        },
-        "oneOf": [
-          {
-            "properties": {
-              "transport": { "const": "stdio" }
-            },
-            "required": ["command"]
-          },
-          {
-            "properties": {
-              "transport": { "const": "http" }
-            },
-            "required": ["url"]
-          },
-          {
-            "properties": {
-              "transport": { "const": "sse" }
-            },
-            "required": ["url"],
-            "$comment": "SSE (Server-Sent Events) is a legacy transport; prefer http for new configurations"
-          }
-        ],
-        "additionalProperties": false
-      },
-      "examples": [
-        {
-          "episodic-memory": {
-            "transport": "stdio",
-            "command": "npx",
-            "args": ["-y", "@anthropic/episodic-memory-mcp"],
-            "env": {
-              "EMBEDDING_MODEL": "${EMBEDDING_MODEL:-text-embedding-3-small}"
-            }
-          },
-          "linear": {
-            "transport": "http",
-            "url": "https://mcp.linear.app/mcp"
-          },
-          "legacy-sse-server": {
-            "transport": "sse",
-            "url": "https://example.com/mcp/sse",
-            "$comment": "SSE is legacy; use http transport for new servers"
-          }
-        }
-      ]
     }
-  },
-  "additionalProperties": false
+  }
 }

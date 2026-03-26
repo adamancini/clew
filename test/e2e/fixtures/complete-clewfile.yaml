@@ -8,5 +8,5 @@ marketplaces:
 plugins:
   - name: superpowers@superpowers-marketplace
   - name: hookify@claude-code-plugins
-    scope: project
+    scope: user
   - name: plugin-dev@claude-code-plugins

@@ -20,23 +20,21 @@ type Scope string
 const (
 	// ScopeUser indicates user-level scope (applies to all projects).
 	ScopeUser Scope = "user"
-	// ScopeProject indicates project-level scope (applies only to current project).
-	ScopeProject Scope = "project"
 )
 
 // AllScopes returns all valid scopes.
 func AllScopes() []Scope {
-	return []Scope{ScopeUser, ScopeProject}
+	return []Scope{ScopeUser}
 }
 
 // Validate checks if the Scope is a valid value.
-// Empty scope is considered valid (defaults to user scope typically).
+// Empty scope is considered valid (defaults to user scope).
 func (s Scope) Validate() error {
 	switch s {
-	case ScopeUser, ScopeProject, "":
+	case ScopeUser, "":
 		return nil
 	default:
-		return fmt.Errorf("invalid scope '%s' (must be user or project)", s)
+		return fmt.Errorf("invalid scope '%s': clew 1.0 only supports user scope", s)
 	}
 }
 
@@ -48,11 +46,6 @@ func (s Scope) String() string {
 // IsUser returns true if the scope is user.
 func (s Scope) IsUser() bool {
 	return s == ScopeUser || s == ""
-}
-
-// IsProject returns true if the scope is project.
-func (s Scope) IsProject() bool {
-	return s == ScopeProject
 }
 
 // Default returns the default scope if empty, otherwise returns the current scope.
@@ -71,78 +64,4 @@ func ParseScope(s string) (Scope, error) {
 		return "", err
 	}
 	return scope, nil
-}
-
-// TransportType represents the MCP server transport protocol.
-type TransportType string
-
-const (
-	// TransportStdio indicates stdio transport (command-based).
-	TransportStdio TransportType = "stdio"
-	// TransportHTTP indicates HTTP transport.
-	TransportHTTP TransportType = "http"
-	// TransportSSE indicates Server-Sent Events transport.
-	TransportSSE TransportType = "sse"
-)
-
-// AllTransportTypes returns all valid transport types.
-func AllTransportTypes() []TransportType {
-	return []TransportType{TransportStdio, TransportHTTP, TransportSSE}
-}
-
-// Validate checks if the TransportType is a valid value.
-func (t TransportType) Validate() error {
-	switch t {
-	case TransportStdio, TransportHTTP, TransportSSE:
-		return nil
-	case "":
-		return fmt.Errorf("transport type is required")
-	default:
-		return fmt.Errorf("invalid transport type '%s' (must be stdio, http, or sse)", t)
-	}
-}
-
-// String returns the string representation of the TransportType.
-func (t TransportType) String() string {
-	return string(t)
-}
-
-// IsStdio returns true if the transport is stdio.
-func (t TransportType) IsStdio() bool {
-	return t == TransportStdio
-}
-
-// IsHTTP returns true if the transport is HTTP.
-func (t TransportType) IsHTTP() bool {
-	return t == TransportHTTP
-}
-
-// IsSSE returns true if the transport is SSE.
-func (t TransportType) IsSSE() bool {
-	return t == TransportSSE
-}
-
-// IsHTTPBased returns true if the transport is HTTP-based (HTTP or SSE).
-func (t TransportType) IsHTTPBased() bool {
-	return t == TransportHTTP || t == TransportSSE
-}
-
-// RequiresCommand returns true if the transport requires a command.
-func (t TransportType) RequiresCommand() bool {
-	return t == TransportStdio
-}
-
-// RequiresURL returns true if the transport requires a URL.
-func (t TransportType) RequiresURL() bool {
-	return t == TransportHTTP || t == TransportSSE
-}
-
-// ParseTransportType parses a string into a TransportType.
-// Returns an error if the string is not a valid transport type.
-func ParseTransportType(s string) (TransportType, error) {
-	tt := TransportType(strings.ToLower(s))
-	if err := tt.Validate(); err != nil {
-		return "", err
-	}
-	return tt, nil
 }

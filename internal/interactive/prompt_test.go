@@ -123,9 +123,6 @@ func TestNewSelection(t *testing.T) {
 	if sel.Plugins == nil {
 		t.Error("expected non-nil Plugins map")
 	}
-	if sel.MCPServers == nil {
-		t.Error("expected non-nil MCPServers map")
-	}
 }
 
 func TestActionSymbolVerb(t *testing.T) {
@@ -167,9 +164,6 @@ func TestFilterDiffBySelection(t *testing.T) {
 			{Name: "approved-plugin", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test", Enabled: &enabled}},
 			{Name: "skipped-plugin", Action: diff.ActionEnable, Desired: &config.Plugin{Name: "test2", Enabled: &enabled}},
 		},
-		MCPServers: []diff.MCPServerDiff{
-			{Name: "approved-mcp", Action: diff.ActionAdd, Desired: &config.MCPServer{Transport: "stdio", Command: "test"}},
-		},
 	}
 
 	selection := &Selection{
@@ -180,9 +174,6 @@ func TestFilterDiffBySelection(t *testing.T) {
 		Plugins: map[string]bool{
 			"approved-plugin": true,
 			"skipped-plugin":  false,
-		},
-		MCPServers: map[string]bool{
-			"approved-mcp": true,
 		},
 	}
 
@@ -216,14 +207,6 @@ func TestFilterDiffBySelection(t *testing.T) {
 	if filtered.Plugins[0].Name != "approved-plugin" {
 		t.Errorf("expected approved-plugin, got %s", filtered.Plugins[0].Name)
 	}
-
-	// Check MCP servers
-	if len(filtered.MCPServers) != 1 {
-		t.Errorf("expected 1 MCP server, got %d", len(filtered.MCPServers))
-	}
-	if filtered.MCPServers[0].Name != "approved-mcp" {
-		t.Errorf("expected approved-mcp, got %s", filtered.MCPServers[0].Name)
-	}
 }
 
 func TestPromptForSelectionQuit(t *testing.T) {
@@ -235,7 +218,6 @@ func TestPromptForSelectionQuit(t *testing.T) {
 		Plugins: []diff.PluginDiff{
 			{Name: "test-plugin", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test", Enabled: &enabled}},
 		},
-		MCPServers: []diff.MCPServerDiff{},
 	}
 
 	// User quits at first prompt
@@ -262,9 +244,6 @@ func TestPromptForSelectionApproveAll(t *testing.T) {
 		},
 		Plugins: []diff.PluginDiff{
 			{Name: "p1", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test1", Enabled: &enabled}},
-		},
-		MCPServers: []diff.MCPServerDiff{
-			{Name: "mcp1", Action: diff.ActionAdd, Desired: &config.MCPServer{Transport: "stdio", Command: "test"}},
 		},
 	}
 
@@ -293,9 +272,6 @@ func TestPromptForSelectionApproveAll(t *testing.T) {
 	if !selection.Plugins["p1"] {
 		t.Error("p1 should be approved")
 	}
-	if !selection.MCPServers["mcp1"] {
-		t.Error("mcp1 should be approved")
-	}
 }
 
 func TestPromptForSelectionPartialApproval(t *testing.T) {
@@ -308,7 +284,6 @@ func TestPromptForSelectionPartialApproval(t *testing.T) {
 			{Name: "p1", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test1", Enabled: &enabled}},
 			{Name: "p2", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test2", Enabled: &enabled}},
 		},
-		MCPServers: []diff.MCPServerDiff{},
 	}
 
 	// Approve m1, approve p1, skip p2, confirm final
@@ -342,8 +317,7 @@ func TestPromptForSelectionNoChanges(t *testing.T) {
 		Marketplaces: []diff.MarketplaceDiff{
 			{Alias: "existing", Action: diff.ActionNone},
 		},
-		Plugins:    []diff.PluginDiff{},
-		MCPServers: []diff.MCPServerDiff{},
+		Plugins: []diff.PluginDiff{},
 	}
 
 	input := strings.NewReader("")
@@ -368,8 +342,7 @@ func TestPromptForSelectionSkipsRemoveActions(t *testing.T) {
 		Marketplaces: []diff.MarketplaceDiff{
 			{Alias: "remove-only", Action: diff.ActionRemove, Current: &state.MarketplaceState{}},
 		},
-		Plugins:    []diff.PluginDiff{},
-		MCPServers: []diff.MCPServerDiff{},
+		Plugins: []diff.PluginDiff{},
 	}
 
 	input := strings.NewReader("")
@@ -394,7 +367,6 @@ func TestPromptForSelectionCancelFinal(t *testing.T) {
 		Plugins: []diff.PluginDiff{
 			{Name: "p1", Action: diff.ActionAdd, Desired: &config.Plugin{Name: "test", Enabled: &enabled}},
 		},
-		MCPServers: []diff.MCPServerDiff{},
 	}
 
 	// Approve plugin, but decline final confirmation

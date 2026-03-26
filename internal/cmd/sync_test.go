@@ -116,15 +116,15 @@ func TestPrintSyncResultVerbose_SuccessfulOperations(t *testing.T) {
 			},
 			wantContains: []string{
 				"Add: Installing plugin context7",
-				"→ claude plugin install context7",
-				"✓ Success",
+				"-> claude plugin install context7",
+				"OK",
 				"Summary:",
 				"Installed: 1",
 				"Updated: 0",
 				"Failed: 0",
 			},
 			wantNotContain: []string{
-				"✗ Failed",
+				"FAILED",
 				"Errors:",
 			},
 		},
@@ -286,7 +286,7 @@ func TestPrintSyncResultVerbose_FailedOperations(t *testing.T) {
 			},
 			wantContains: []string{
 				"Add: Installing plugin bad-plugin",
-				"✗ Failed: plugin not found in marketplace",
+				"FAILED: plugin not found in marketplace",
 				"Failed: 1",
 				"Errors:",
 				"plugin not found in marketplace",
@@ -300,19 +300,19 @@ func TestPrintSyncResultVerbose_FailedOperations(t *testing.T) {
 				Failed:    1,
 				Operations: []sync.Operation{
 					{
-						Type:        "mcp",
-						Name:        "server1",
+						Type:        "plugin",
+						Name:        "broken-plugin",
 						Action:      "add",
-						Command:     "claude mcp add server1",
-						Description: "Adding MCP server server1",
+						Command:     "claude plugin install broken-plugin",
+						Description: "Adding plugin broken-plugin",
 						Success:     false,
 						Error:       "",
 					},
 				},
 			},
 			wantContains: []string{
-				"Add: Adding MCP server server1",
-				"✗ Failed",
+				"Add: Adding plugin broken-plugin",
+				"FAILED",
 				"Failed: 1",
 			},
 		},
@@ -343,8 +343,8 @@ func TestPrintSyncResultVerbose_FailedOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✓ Success",
-				"✗ Failed: network timeout",
+				"OK",
+				"FAILED: network timeout",
 				"Installed: 1",
 				"Failed: 1",
 			},
@@ -388,7 +388,7 @@ func TestPrintSyncResultShort_SuccessfulOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✓ context7 (plugin add)",
+				"OK context7 (plugin add)",
 				"Summary: 1 installed, 0 updated",
 			},
 		},
@@ -420,9 +420,9 @@ func TestPrintSyncResultShort_SuccessfulOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✓ official (marketplace add)",
-				"✓ test-plugin (plugin add)",
-				"✓ other-plugin (plugin enable)",
+				"OK official (marketplace add)",
+				"OK test-plugin (plugin add)",
+				"OK other-plugin (plugin enable)",
 				"Summary: 2 installed, 1 updated",
 			},
 		},
@@ -445,7 +445,7 @@ func TestPrintSyncResultShort_SuccessfulOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✓ plugin1 (plugin add)",
+				"OK plugin1 (plugin add)",
 				"Items needing attention:",
 				"mcp (oauth): notion",
 			},
@@ -490,7 +490,7 @@ func TestPrintSyncResultShort_FailedOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✗ bad-plugin (plugin add)",
+				"FAILED bad-plugin (plugin add)",
 				"Error: plugin not found",
 				"1 failed",
 			},
@@ -512,7 +512,7 @@ func TestPrintSyncResultShort_FailedOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✗ server1 (mcp add)",
+				"FAILED server1 (mcp add)",
 				"1 failed",
 			},
 		},
@@ -539,8 +539,8 @@ func TestPrintSyncResultShort_FailedOperations(t *testing.T) {
 				},
 			},
 			wantContains: []string{
-				"✓ good-plugin (plugin add)",
-				"✗ bad-plugin (plugin add)",
+				"OK good-plugin (plugin add)",
+				"FAILED bad-plugin (plugin add)",
 				"Error: timeout",
 				"1 installed",
 				"1 failed",
@@ -586,13 +586,13 @@ func TestPrintSyncResultText_SelectsCorrectFormatter(t *testing.T) {
 			printSyncResultText(result, opts)
 		})
 
-		// Short format shows "✓ name (type action)"
-		if !strings.Contains(output, "✓ test-plugin (plugin add)") {
+		// Short format shows "OK name (type action)"
+		if !strings.Contains(output, "OK test-plugin (plugin add)") {
 			t.Errorf("short mode should use short formatter\nGot:\n%s", output)
 		}
 
 		// Short format should NOT show full command
-		if strings.Contains(output, "→ claude plugin install") {
+		if strings.Contains(output, "-> claude plugin install") {
 			t.Errorf("short mode should not show commands\nGot:\n%s", output)
 		}
 	})
@@ -604,7 +604,7 @@ func TestPrintSyncResultText_SelectsCorrectFormatter(t *testing.T) {
 		})
 
 		// Verbose format shows command
-		if !strings.Contains(output, "→ claude plugin install test-plugin") {
+		if !strings.Contains(output, "-> claude plugin install test-plugin") {
 			t.Errorf("verbose mode should show commands\nGot:\n%s", output)
 		}
 
@@ -640,12 +640,12 @@ func TestPrintSyncResultVerbose_OperationWithoutCommand(t *testing.T) {
 	if !strings.Contains(output, "Add: Installing test-plugin") {
 		t.Errorf("should show description even without command\nGot:\n%s", output)
 	}
-	if !strings.Contains(output, "✓ Success") {
+	if !strings.Contains(output, "OK") {
 		t.Errorf("should show success status\nGot:\n%s", output)
 	}
 
 	// Should NOT show arrow with empty command
-	if strings.Contains(output, "→ \n") {
+	if strings.Contains(output, "-> \n") {
 		t.Errorf("should not show empty command line\nGot:\n%s", output)
 	}
 }

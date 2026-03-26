@@ -10,6 +10,7 @@ import (
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/interactive"
 	"github.com/adamancini/clew/internal/output"
+	"github.com/adamancini/clew/internal/state"
 )
 
 func newDiffCmd() *cobra.Command {
@@ -60,7 +61,7 @@ func runDiff(interactiveMode bool, showCommands bool) error {
 	}
 
 	// 4. Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)
@@ -180,32 +181,9 @@ func printDiffResultText(result *diff.Result) {
 		printDiffItem("plugin", p.Name, p.Action, p.Desired != nil, p.Current != nil)
 	}
 
-	// MCP Servers
-	hasMCPChanges := false
-	for _, m := range result.MCPServers {
-		if m.Action == diff.ActionNone {
-			continue
-		}
-		if !hasMCPChanges {
-			if hasMarketplaceChanges || hasPluginChanges {
-				fmt.Println()
-			}
-			fmt.Println("MCP Servers:")
-			hasMCPChanges = true
-		}
-		extra := ""
-		if m.RequiresOAuth {
-			extra = " (requires OAuth - manual setup needed)"
-		}
-		printDiffItem("mcp", m.Name, m.Action, m.Desired != nil, m.Current != nil)
-		if extra != "" {
-			fmt.Printf("    %s\n", extra)
-		}
-	}
-
 	// Summary
 	fmt.Println()
-	fmt.Printf("Summary: %d to add, %d to update, %d to remove, %d need attention\n",
+	fmt.Printf("Summary: %d to add, %d to update, %d to remove, %d unmanaged\n",
 		add, update, remove, attention)
 }
 

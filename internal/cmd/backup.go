@@ -13,6 +13,7 @@ import (
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/output"
+	"github.com/adamancini/clew/internal/state"
 	"github.com/adamancini/clew/internal/sync"
 )
 
@@ -33,7 +34,6 @@ func newBackupCmd() *cobra.Command {
 Backups are stored in ~/.cache/clew/backups/ and include:
   - Installed marketplaces
   - Installed plugins and their enabled state
-  - MCP server configurations
 
 Use 'clew backup create' before making changes, and 'clew backup restore'
 to recover a previous configuration.`,
@@ -133,7 +133,7 @@ By default, keeps the 30 most recent backups.`,
 // runBackupCreate creates a new backup.
 func runBackupCreate(note string) error {
 	// Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read current state: %w", err)
@@ -241,7 +241,7 @@ func runBackupRestore(id string, skipConfirm bool) error {
 	fmt.Println()
 
 	// Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read current state: %w", err)
@@ -369,7 +369,6 @@ func backupToConfig(bak *backup.Backup) *config.Clewfile {
 		Version:      1,
 		Marketplaces: make(map[string]config.Marketplace),
 		Plugins:      []config.Plugin{},
-		MCPServers:   make(map[string]config.MCPServer),
 	}
 
 	// Convert marketplaces
@@ -394,17 +393,6 @@ func backupToConfig(bak *backup.Backup) *config.Clewfile {
 		clewfile.Plugins = append(clewfile.Plugins, plugin)
 	}
 
-	// Convert MCP servers
-	for name, m := range bak.State.MCPServers {
-		clewfile.MCPServers[name] = config.MCPServer{
-			Transport: m.Transport,
-			Command:   m.Command,
-			Args:      m.Args,
-			URL:       m.URL,
-			Scope:     m.Scope,
-		}
-	}
-
 	return clewfile
 }
 
@@ -424,12 +412,6 @@ func printRestoreDiff(result *diff.Result) {
 		printDiffLine(p.Action, "plugin", p.Name)
 	}
 
-	for _, m := range result.MCPServers {
-		if m.Action == diff.ActionNone {
-			continue
-		}
-		printDiffLine(m.Action, "mcp", m.Name)
-	}
 }
 
 // printDiffLine prints a single diff line with appropriate symbol.

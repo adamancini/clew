@@ -3,8 +3,6 @@ package diff
 import (
 	"fmt"
 	"strings"
-
-	"github.com/adamancini/clew/internal/types"
 )
 
 // Command represents a CLI command to reconcile state.
@@ -76,36 +74,6 @@ func (r *Result) GenerateCommands() []Command {
 		}
 	}
 
-	// 3. MCP servers (manual setup required for OAuth)
-	for _, m := range r.MCPServers {
-		switch m.Action {
-		case ActionAdd:
-			if m.RequiresOAuth {
-				commands = append(commands, Command{
-					Command:     fmt.Sprintf("# Manual setup required: claude mcp add %s", m.Name),
-					Description: fmt.Sprintf("MCP server %s requires OAuth setup (use /mcp in Claude)", m.Name),
-				})
-			} else if m.Desired != nil {
-				// Parse transport type for helper method access
-				transport := types.TransportType(m.Desired.Transport)
-				// stdio MCP servers can be automated
-				if transport.IsStdio() {
-					args := strings.Join(m.Desired.Args, " ")
-					cmd := fmt.Sprintf("claude mcp add %s %s %s", m.Name, m.Desired.Command, args)
-					commands = append(commands, Command{
-						Command:     cmd,
-						Description: fmt.Sprintf("Add MCP server: %s", m.Name),
-					})
-				}
-			}
-		case ActionRemove:
-			commands = append(commands, Command{
-				Command:     fmt.Sprintf("claude mcp remove %s", m.Name),
-				Description: fmt.Sprintf("Remove MCP server not in Clewfile: %s", m.Name),
-			})
-		}
-	}
-
 	return commands
 }
 
@@ -115,9 +83,9 @@ func FormatCommands(commands []Command, includeComments bool) string {
 
 	for _, cmd := range commands {
 		if includeComments {
-			output.WriteString(fmt.Sprintf("# %s\n", cmd.Description))
+			fmt.Fprintf(&output, "# %s\n", cmd.Description)
 		}
-		output.WriteString(fmt.Sprintf("%s\n", cmd.Command))
+		fmt.Fprintf(&output, "%s\n", cmd.Command)
 		if includeComments {
 			output.WriteString("\n")
 		}

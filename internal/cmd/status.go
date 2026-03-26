@@ -9,6 +9,7 @@ import (
 	"github.com/adamancini/clew/internal/config"
 	"github.com/adamancini/clew/internal/diff"
 	"github.com/adamancini/clew/internal/output"
+	"github.com/adamancini/clew/internal/state"
 )
 
 func newStatusCmd() *cobra.Command {
@@ -28,7 +29,7 @@ type StatusSummary struct {
 	Add       int  `json:"add" yaml:"add"`
 	Update    int  `json:"update" yaml:"update"`
 	Remove    int  `json:"remove" yaml:"remove"`
-	Attention int  `json:"attention" yaml:"attention"`
+	Unmanaged int  `json:"unmanaged" yaml:"unmanaged"`
 }
 
 // String implements fmt.Stringer for text output.
@@ -36,8 +37,8 @@ func (s StatusSummary) String() string {
 	if s.InSync {
 		return "In sync"
 	}
-	return fmt.Sprintf("Add: %d, Update: %d, Remove: %d, Attention: %d",
-		s.Add, s.Update, s.Remove, s.Attention)
+	return fmt.Sprintf("Add: %d, Update: %d, Remove: %d, Unmanaged: %d",
+		s.Add, s.Update, s.Remove, s.Unmanaged)
 }
 
 // runStatus executes the status workflow.
@@ -67,7 +68,7 @@ func runStatus() error {
 	}
 
 	// 4. Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)
@@ -85,7 +86,7 @@ func runStatus() error {
 		Add:       add,
 		Update:    update,
 		Remove:    remove,
-		Attention: attention,
+		Unmanaged: attention,
 	}
 
 	// 7. Format and display output
@@ -127,8 +128,8 @@ func printStatusText(summary StatusSummary) {
 	if summary.Remove > 0 {
 		fmt.Printf("  To remove:    %d\n", summary.Remove)
 	}
-	if summary.Attention > 0 {
-		fmt.Printf("  Need attention: %d\n", summary.Attention)
+	if summary.Unmanaged > 0 {
+		fmt.Printf("  Unmanaged:     %d\n", summary.Unmanaged)
 	}
 
 	fmt.Println()

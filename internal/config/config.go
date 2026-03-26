@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/adamancini/clew/internal/types"
 )
@@ -15,21 +14,11 @@ import (
 type (
 	// Scope represents the installation scope.
 	Scope = types.Scope
-	// TransportType represents the MCP server transport protocol.
-	TransportType = types.TransportType
 )
 
 // Scope constants - re-exported from types package.
 const (
-	ScopeUser    = types.ScopeUser
-	ScopeProject = types.ScopeProject
-)
-
-// Transport type constants - re-exported from types package.
-const (
-	TransportStdio = types.TransportStdio
-	TransportHTTP  = types.TransportHTTP
-	TransportSSE   = types.TransportSSE
+	ScopeUser = types.ScopeUser
 )
 
 // Marketplace represents a plugin marketplace source.
@@ -44,7 +33,6 @@ type Clewfile struct {
 	Version      int                    `yaml:"version" toml:"version" json:"version"`
 	Marketplaces map[string]Marketplace `yaml:"marketplaces,omitempty" toml:"marketplaces,omitempty" json:"marketplaces,omitempty"`
 	Plugins      []Plugin               `yaml:"plugins" toml:"plugins" json:"plugins"`
-	MCPServers   map[string]MCPServer   `yaml:"mcp_servers" toml:"mcp_servers" json:"mcp_servers"`
 }
 
 // GetMarketplace finds a marketplace by its alias (map key).
@@ -66,17 +54,6 @@ type Plugin struct {
 	Name    string `yaml:"name" toml:"name" json:"name"`
 	Enabled *bool  `yaml:"enabled,omitempty" toml:"enabled,omitempty" json:"enabled,omitempty"`
 	Scope   string `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
-}
-
-// MCPServer represents an MCP server configuration.
-type MCPServer struct {
-	Transport string            `yaml:"transport" toml:"transport" json:"transport"` // stdio, http
-	Command   string            `yaml:"command,omitempty" toml:"command,omitempty" json:"command,omitempty"`
-	Args      []string          `yaml:"args,omitempty" toml:"args,omitempty" json:"args,omitempty"`
-	URL       string            `yaml:"url,omitempty" toml:"url,omitempty" json:"url,omitempty"`
-	Env       map[string]string `yaml:"env,omitempty" toml:"env,omitempty" json:"env,omitempty"`
-	Headers   map[string]string `yaml:"headers,omitempty" toml:"headers,omitempty" json:"headers,omitempty"`
-	Scope     string            `yaml:"scope,omitempty" toml:"scope,omitempty" json:"scope,omitempty"`
 }
 
 // FindClewfile searches for a Clewfile in the standard locations.
@@ -169,27 +146,7 @@ func Load(path string) (*Clewfile, error) {
 }
 
 // InferScope determines the default scope based on Clewfile location.
-// Returns "user" for home directory locations, "project" otherwise.
+// clew 1.0 only supports user scope, so this always returns "user".
 func InferScope(clewfilePath string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		// If we can't determine home directory, default to project scope (safer)
-		return "project"
-	}
-
-	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
-	if xdgConfig == "" {
-		xdgConfig = filepath.Join(home, ".config")
-	}
-
-	dir := filepath.Dir(clewfilePath)
-
-	// If in home config directories, default to user scope
-	if dir == home || dir == filepath.Join(home, ".claude") ||
-		strings.HasPrefix(dir, xdgConfig+string(os.PathSeparator)) || dir == xdgConfig {
-		return "user"
-	}
-
-	// Otherwise, assume project scope
-	return "project"
+	return "user"
 }

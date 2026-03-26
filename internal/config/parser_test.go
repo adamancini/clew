@@ -74,11 +74,6 @@ plugins:
     enabled: true
     scope: user
   - simple-plugin@official
-mcp_servers:
-  filesystem:
-    transport: stdio
-    command: npx
-    args: ["@modelcontextprotocol/server-filesystem", "/tmp"]
 `)
 
 	clewfile, err := parse(content, FormatYAML)
@@ -127,19 +122,6 @@ mcp_servers:
 	if clewfile.Plugins[1].Name != "simple-plugin@official" {
 		t.Errorf("Plugin[1].Name = %s, want simple-plugin@official", clewfile.Plugins[1].Name)
 	}
-
-	if len(clewfile.MCPServers) != 1 {
-		t.Errorf("MCPServers count = %d, want 1", len(clewfile.MCPServers))
-	}
-
-	if s, ok := clewfile.MCPServers["filesystem"]; ok {
-		if s.Transport != "stdio" {
-			t.Errorf("MCP transport = %s, want stdio", s.Transport)
-		}
-		if s.Command != "npx" {
-			t.Errorf("MCP command = %s, want npx", s.Command)
-		}
-	}
 }
 
 func TestParseTOML(t *testing.T) {
@@ -157,11 +139,6 @@ ref = "v1.0.0"
 name = "superpowers@official"
 enabled = true
 scope = "user"
-
-[mcp_servers.filesystem]
-transport = "stdio"
-command = "npx"
-args = ["@modelcontextprotocol/server-filesystem", "/tmp"]
 `)
 
 	clewfile, err := parse(content, FormatTOML)
@@ -197,14 +174,7 @@ func TestParseJSON(t *testing.T) {
   "plugins": [
     {"name": "superpowers@official", "enabled": true, "scope": "user"},
     "simple-plugin@official"
-  ],
-  "mcp_servers": {
-    "filesystem": {
-      "transport": "stdio",
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "/tmp"]
-    }
-  }
+  ]
 }`)
 
 	clewfile, err := parse(content, FormatJSON)
@@ -225,35 +195,10 @@ func TestParseJSON(t *testing.T) {
 	}
 }
 
-func TestParseEnvVarExpansion(t *testing.T) {
-	_ = os.Setenv("MCP_COMMAND", "/usr/local/bin/mcp-server")
-	defer func() { _ = os.Unsetenv("MCP_COMMAND") }()
-
-	content := []byte(`
-version: 1
-mcp_servers:
-  custom:
-    transport: stdio
-    command: ${MCP_COMMAND}
-`)
-
-	clewfile, err := parse(content, FormatYAML)
-	if err != nil {
-		t.Fatalf("parse() error = %v", err)
-	}
-
-	if s, ok := clewfile.MCPServers["custom"]; ok {
-		if s.Command != "/usr/local/bin/mcp-server" {
-			t.Errorf("MCP command = %s, want /usr/local/bin/mcp-server", s.Command)
-		}
-	}
-}
-
 func TestParseEmptyMarketplaces(t *testing.T) {
 	content := []byte(`
 version: 1
 plugins: []
-mcp_servers: {}
 `)
 
 	clewfile, err := parse(content, FormatYAML)

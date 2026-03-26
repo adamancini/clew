@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-03-22
+
+### Removed
+- MCP server management (config, validation, state reading, diff, sync, export, schema)
+- CLIReader code path and `--cli` flag (GitHub issue #34 resolved by deletion)
+- `clew add` and `clew remove` stub commands
+- `-f`/`--filesystem`/`--read-from-filesystem` deprecated flags
+- Project scope support (`scope: project` now rejected; user scope only)
+- `ScopeProject` constant and `IsProject()` method
+- `TransportType` constants and validation
+- `getStateReader()` helper (replaced with direct `FilesystemReader` construction)
+
+### Changed
+- Unicode symbols replaced with ASCII: `->`, `OK`, `FAILED`
+- "Need attention" renamed to "Unmanaged" in status and diff output
+- `InferScope()` always returns "user"
+- All plugin installs explicitly pass `--scope user` to Claude CLI
+- JSON Schema: removed `additionalProperties: false` at top level
+- Root command description updated to "plugins and marketplaces"
+
+### Fixed
+- E2e test fixtures updated: project scope entries changed to user scope
+- All e2e tests pass without `--filesystem` flag
+
 ## [0.9.2] - 2026-01-23
 
 ### Changed

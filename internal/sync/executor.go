@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/adamancini/clew/internal/diff"
-	"github.com/adamancini/clew/internal/types"
 )
 
 // CommandRunner is an interface for running external commands.
@@ -71,10 +70,8 @@ func (s *Syncer) installPlugin(p diff.PluginDiff) (Operation, error) {
 
 	args := []string{"plugin", "install", p.Desired.Name}
 
-	// Add scope if specified
-	if p.Desired.Scope != "" {
-		args = append(args, "--scope", p.Desired.Scope)
-	}
+	// clew 1.0 always installs at user scope
+	args = append(args, "--scope", "user")
 
 	// Build command string before executing
 	op.Command = "claude " + strings.Join(args, " ")
@@ -126,84 +123,3 @@ func (s *Syncer) updatePluginState(p diff.PluginDiff) (Operation, error) {
 	op.Success = true
 	return op, nil
 }
-
-// addMCPServer executes `claude mcp add <name> <command|url> [args...]`.
-func (s *Syncer) addMCPServer(m diff.MCPServerDiff) (Operation, error) {
-	op := Operation{
-		Type:        "mcp",
-		Name:        m.Name,
-		Action:      "add",
-		Description: fmt.Sprintf("Add MCP server: %s", m.Name),
-	}
-
-	if m.Desired == nil {
-		op.Success = false
-		op.Error = fmt.Sprintf("no desired state for MCP server %s", m.Name)
-		return op, fmt.Errorf("no desired state for MCP server %s", m.Name)
-	}
-
-	args := []string{"mcp", "add", "--transport", m.Desired.Transport}
-
-	// Add scope if specified
-	if m.Desired.Scope != "" {
-		args = append(args, "--scope", m.Desired.Scope)
-	}
-
-	// Add environment variables
-	for key, value := range m.Desired.Env {
-		args = append(args, "--env", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	// Add headers (for HTTP/SSE)
-	for key, value := range m.Desired.Headers {
-		args = append(args, "--header", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	// Add the server name
-	args = append(args, m.Name)
-
-	// Parse transport type for helper method access
-	transport := types.TransportType(m.Desired.Transport)
-
-	// Add command/URL and args based on transport
-	switch {
-	case transport.IsStdio():
-		if m.Desired.Command == "" {
-			op.Success = false
-			op.Error = fmt.Sprintf("stdio MCP server %s requires a command", m.Name)
-			return op, fmt.Errorf("stdio MCP server %s requires a command", m.Name)
-		}
-		// Add -- separator before command to prevent flag parsing issues
-		args = append(args, "--")
-		args = append(args, m.Desired.Command)
-		args = append(args, m.Desired.Args...)
-		op.Description = fmt.Sprintf("Add stdio MCP server: %s (command: %s)", m.Name, m.Desired.Command)
-	case transport.IsHTTPBased():
-		if m.Desired.URL == "" {
-			op.Success = false
-			op.Error = fmt.Sprintf("%s MCP server %s requires a URL", m.Desired.Transport, m.Name)
-			return op, fmt.Errorf("%s MCP server %s requires a URL", m.Desired.Transport, m.Name)
-		}
-		args = append(args, m.Desired.URL)
-		op.Description = fmt.Sprintf("Add %s MCP server: %s (url: %s)", m.Desired.Transport, m.Name, m.Desired.URL)
-	default:
-		op.Success = false
-		op.Error = fmt.Sprintf("unknown MCP transport: %s", m.Desired.Transport)
-		return op, fmt.Errorf("unknown MCP transport: %s", m.Desired.Transport)
-	}
-
-	// Build command string before executing
-	op.Command = "claude " + strings.Join(args, " ")
-
-	output, err := s.runner.Run("claude", args...)
-	if err != nil {
-		op.Success = false
-		op.Error = fmt.Sprintf("failed to add MCP server %s: %v\nOutput: %s", m.Name, err, string(output))
-		return op, fmt.Errorf("failed to add MCP server %s: %w\nOutput: %s", m.Name, err, string(output))
-	}
-
-	op.Success = true
-	return op, nil
-}
-
-

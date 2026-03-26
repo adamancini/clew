@@ -76,7 +76,6 @@ When properly configured, your IDE will provide:
 ✅ **Auto-completion**
 - Marketplace source types (`github`, `local`)
 - Plugin scope options (`user`, `project`)
-- MCP transport types (`stdio`, `http`)
 - Field names and structure
 
 ✅ **Validation**

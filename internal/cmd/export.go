@@ -29,7 +29,6 @@ type ExportedClewfile struct {
 	Version      int                           `json:"version" yaml:"version"`
 	Marketplaces map[string]ExportedMarketplace `json:"marketplaces,omitempty" yaml:"marketplaces,omitempty"`
 	Plugins      []ExportedPlugin              `json:"plugins,omitempty" yaml:"plugins,omitempty"`
-	MCPServers   map[string]ExportedMCPServer  `json:"mcp_servers,omitempty" yaml:"mcp_servers,omitempty"`
 }
 
 // ExportedMarketplace represents a marketplace for export.
@@ -45,19 +44,10 @@ type ExportedPlugin struct {
 	Scope   string `json:"scope,omitempty" yaml:"scope,omitempty"`
 }
 
-// ExportedMCPServer represents an MCP server for export.
-type ExportedMCPServer struct {
-	Transport string   `json:"transport" yaml:"transport"`
-	Command   string   `json:"command,omitempty" yaml:"command,omitempty"`
-	Args      []string `json:"args,omitempty" yaml:"args,omitempty"`
-	URL       string   `json:"url,omitempty" yaml:"url,omitempty"`
-	Scope     string   `json:"scope,omitempty" yaml:"scope,omitempty"`
-}
-
 // runExport executes the export workflow.
 func runExport() error {
 	// 1. Read current state
-	reader := getStateReader()
+	reader := &state.FilesystemReader{}
 	currentState, err := reader.Read()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading current state: %v\n", err)
@@ -94,12 +84,18 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		Version:      1,
 		Marketplaces: make(map[string]ExportedMarketplace),
 		Plugins:      make([]ExportedPlugin, 0),
-		MCPServers:   make(map[string]ExportedMCPServer),
 	}
 
-	// Convert marketplaces and track valid marketplace names
+	// Convert marketplaces and track valid marketplace names.
+	// Skip local/directory-sourced marketplaces (empty Repo) since they
+	// cannot be represented in a portable Clewfile.
 	validMarketplaces := make(map[string]bool)
+	var skippedMarketplaces []string
 	for alias, m := range s.Marketplaces {
+		if m.Repo == "" {
+			skippedMarketplaces = append(skippedMarketplaces, alias)
+			continue
+		}
 		em := ExportedMarketplace{
 			Repo: m.Repo,
 		}
@@ -108,6 +104,11 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		}
 		exported.Marketplaces[alias] = em
 		validMarketplaces[alias] = true
+	}
+	if len(skippedMarketplaces) > 0 {
+		sort.Strings(skippedMarketplaces)
+		fmt.Fprintf(os.Stderr, "Note: Skipped %d local marketplace(s) (no repo): %v\n",
+			len(skippedMarketplaces), skippedMarketplaces)
 	}
 
 	// Convert plugins, skipping those that reference non-existent marketplaces
@@ -168,36 +169,12 @@ func convertStateToClewfile(s *state.State) *ExportedClewfile {
 		return exported.Plugins[i].Name < exported.Plugins[j].Name
 	})
 
-	// Convert MCP servers
-	for name, m := range s.MCPServers {
-		em := ExportedMCPServer{
-			Transport: m.Transport,
-		}
-		switch m.Transport {
-		case "stdio":
-			em.Command = m.Command
-			if len(m.Args) > 0 {
-				em.Args = m.Args
-			}
-		case "http", "sse":
-			em.URL = m.URL
-		}
-		// Only include scope if not user (default)
-		if m.Scope != "" && m.Scope != "user" {
-			em.Scope = m.Scope
-		}
-		exported.MCPServers[name] = em
-	}
-
 	// Clean up empty slices/maps for nicer output
 	if len(exported.Marketplaces) == 0 {
 		exported.Marketplaces = nil
 	}
 	if len(exported.Plugins) == 0 {
 		exported.Plugins = nil
-	}
-	if len(exported.MCPServers) == 0 {
-		exported.MCPServers = nil
 	}
 
 	return exported
