@@ -38,3 +38,5 @@ go.work
 
 # Debug
 __debug_bin*
+.vault/
+.worktrees/
