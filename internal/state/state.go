@@ -10,10 +10,16 @@ type State struct {
 // MarketplaceState represents a marketplace's current state.
 type MarketplaceState struct {
 	Alias           string // Short name used for referencing
-	Repo            string // Repository URL (e.g., "owner/repo")
+	Repo            string // Remote repository URL (e.g., "owner/repo") — empty for local
+	Path            string // Local git checkout path — empty for remote
 	Ref             string // Git ref (branch/tag/SHA) if specified
 	InstallLocation string // Local path where marketplace is cloned
 	LastUpdated     string // Last update timestamp
+}
+
+// IsLocal returns true when this marketplace is a local git checkout.
+func (m MarketplaceState) IsLocal() bool {
+	return m.Path != ""
 }
 
 // PluginState represents a plugin's current state.

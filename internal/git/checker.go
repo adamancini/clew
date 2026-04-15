@@ -1,6 +1,8 @@
 package git
 
 import (
+	"fmt"
+
 	"github.com/adamancini/clew/internal/config"
 )
 
@@ -44,7 +46,8 @@ func (r *CheckResult) HasInfo() bool {
 	return len(r.Info) > 0
 }
 
-// CheckClewfile checks git status for all local marketplaces and plugins in the Clewfile.
+// CheckClewfile checks git status for all local path-based marketplaces in the Clewfile.
+// Remote repo marketplaces are skipped since they are managed by the claude CLI.
 func (c *Checker) CheckClewfile(clewfile *config.Clewfile) *CheckResult {
 	result := NewCheckResult()
 
@@ -54,9 +57,25 @@ func (c *Checker) CheckClewfile(clewfile *config.Clewfile) *CheckResult {
 		return result
 	}
 
-	// Local sources are no longer supported (removed in v0.7.0)
-	// Git status checking only applies to github sources, which are
-	// not stored locally and thus don't need git status checks.
+	for alias, m := range clewfile.Marketplaces {
+		if !m.IsLocal() {
+			continue
+		}
+		status := c.CheckRepository(m.Path)
+		result.Marketplaces[alias] = status
+		switch status.Level {
+		case LevelWarning:
+			result.Warnings = append(result.Warnings,
+				fmt.Sprintf("marketplace %q has uncommitted changes (%s) - skipping git pull", alias, m.Path))
+			result.SkipMarketplaces[alias] = true
+		case LevelError:
+			result.Warnings = append(result.Warnings,
+				fmt.Sprintf("marketplace %q git check failed: %v - skipping git pull", alias, status.Error))
+			result.SkipMarketplaces[alias] = true
+		case LevelInfo:
+			result.Info = append(result.Info, fmt.Sprintf("marketplace %q: %s", alias, status.Message))
+		}
+	}
 
 	return result
 }

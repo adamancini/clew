@@ -14,24 +14,49 @@
     },
     "marketplaces": {
       "type": "object",
-      "description": "Plugin marketplace repositories",
+      "description": "Plugin marketplace repositories. Each entry uses either repo (remote) or path (local git checkout), not both.",
       "additionalProperties": {
         "type": "object",
-        "required": ["repo"],
-        "properties": {
-          "repo": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Repository URL - short form (owner/repo), HTTPS, or SSH",
-            "examples": ["anthropics/claude-plugins-official", "https://github.com/obra/superpowers-marketplace.git", "git@github.com:owner/repo.git"]
+        "oneOf": [
+          {
+            "required": ["repo"],
+            "properties": {
+              "repo": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Remote repository URL — short form (owner/repo), HTTPS, or SSH",
+                "examples": ["anthropics/claude-plugins-official", "https://github.com/obra/superpowers-marketplace.git", "git@github.com:owner/repo.git"]
+              },
+              "ref": {
+                "type": "string",
+                "description": "Optional git ref (branch, tag, or SHA) — remote repos only",
+                "examples": ["main", "v1.0.0", "abc1234"]
+              },
+              "auto_update": {
+                "type": "boolean",
+                "description": "Whether to git-pull before syncing (default false for remote repos)"
+              }
+            },
+            "additionalProperties": false
           },
-          "ref": {
-            "type": "string",
-            "description": "Optional git ref (branch, tag, or SHA)",
-            "examples": ["main", "v1.0.0", "abc1234"]
+          {
+            "required": ["path"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Absolute or ~-prefixed path to a local git checkout of the marketplace",
+                "examples": ["~/plugins/devops-toolkit", "/Users/ada/.claude/plugins/repos/my-tools"]
+              },
+              "auto_update": {
+                "type": "boolean",
+                "description": "Whether to git-pull before syncing (default true for local paths)",
+                "default": true
+              }
+            },
+            "additionalProperties": false
           }
-        },
-        "additionalProperties": false
+        ]
       },
       "examples": [
         {
@@ -41,6 +66,10 @@
           "superpowers-marketplace": {
             "repo": "obra/superpowers-marketplace",
             "ref": "main"
+          },
+          "devops-toolkit": {
+            "path": "~/.claude/plugins/repos/devops-toolkit",
+            "auto_update": true
           }
         }
       ]

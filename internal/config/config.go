@@ -23,9 +23,47 @@ const (
 
 // Marketplace represents a plugin marketplace source.
 // Marketplaces are repositories containing multiple plugins that can be installed.
+// Exactly one of Repo (remote) or Path (local git checkout) must be set.
 type Marketplace struct {
-	Repo string `yaml:"repo" toml:"repo" json:"repo"` // Repository URL (e.g., "owner/repo", "https://gitlab.com/company/plugins.git")
-	Ref  string `yaml:"ref,omitempty" toml:"ref,omitempty" json:"ref,omitempty"` // Optional git ref (branch/tag/SHA)
+	Repo       string `yaml:"repo,omitempty" toml:"repo,omitempty" json:"repo,omitempty"`                           // Remote repo URL (e.g., "owner/repo", "https://gitlab.com/company/plugins.git")
+	Path       string `yaml:"path,omitempty" toml:"path,omitempty" json:"path,omitempty"`                           // Local git repo path (e.g., "~/plugins/my-tools")
+	Ref        string `yaml:"ref,omitempty" toml:"ref,omitempty" json:"ref,omitempty"`                               // Optional git ref (branch/tag/SHA) — remote repos only
+	AutoUpdate *bool  `yaml:"auto_update,omitempty" toml:"auto_update,omitempty" json:"auto_update,omitempty"` // Auto git-pull before sync (default true for local paths)
+}
+
+// IsLocal returns true when this marketplace is a local git checkout.
+func (m Marketplace) IsLocal() bool {
+	return m.Path != ""
+}
+
+// IsAutoUpdate returns true when the marketplace should be git-pulled on each sync.
+// Defaults to true for local paths, false for remote repos.
+func (m Marketplace) IsAutoUpdate() bool {
+	if m.AutoUpdate != nil {
+		return *m.AutoUpdate
+	}
+	return m.IsLocal()
+}
+
+// Source returns the argument passed to `claude plugin marketplace add`.
+// For remote repos this is the repo URL; for local paths it is the expanded absolute path.
+func (m Marketplace) Source() string {
+	if m.IsLocal() {
+		return expandPath(m.Path)
+	}
+	return m.Repo
+}
+
+// expandPath expands a leading ~/ to the user's home directory.
+func expandPath(path string) string {
+	if len(path) >= 2 && path[:2] == "~/" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return path
+		}
+		return filepath.Join(home, path[2:])
+	}
+	return path
 }
 
 // Clewfile represents the parsed configuration file.

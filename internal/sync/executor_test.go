@@ -31,6 +31,19 @@ func (m *MockCommandRunner) Run(name string, args ...string) ([]byte, error) {
 	return []byte("success"), nil
 }
 
+func (m *MockCommandRunner) RunInDir(dir, name string, args ...string) ([]byte, error) {
+	cmd := name + " " + strings.Join(args, " ")
+	m.Commands = append(m.Commands, cmd)
+
+	if err, ok := m.Errors[cmd]; ok {
+		return nil, err
+	}
+	if output, ok := m.Outputs[cmd]; ok {
+		return output, nil
+	}
+	return []byte("Already up to date."), nil
+}
+
 func newMockSyncer() (*Syncer, *MockCommandRunner) {
 	mock := &MockCommandRunner{
 		Commands: []string{},
@@ -38,6 +51,89 @@ func newMockSyncer() (*Syncer, *MockCommandRunner) {
 		Errors:   make(map[string]error),
 	}
 	return NewSyncerWithRunner(mock), mock
+}
+
+func TestAddLocalPathMarketplace(t *testing.T) {
+	syncer, mock := newMockSyncer()
+
+	m := diff.MarketplaceDiff{
+		Alias:  "local-tools",
+		Action: diff.ActionAdd,
+		Desired: &config.Marketplace{
+			Path: "/tmp/local-tools",
+		},
+	}
+
+	op, err := syncer.addMarketplace(m)
+	if err != nil {
+		t.Fatalf("addMarketplace() error = %v", err)
+	}
+
+	expected := "claude plugin marketplace add /tmp/local-tools"
+	if len(mock.Commands) != 1 || mock.Commands[0] != expected {
+		t.Errorf("Command = %v, want [%q]", mock.Commands, expected)
+	}
+	if op.Command != expected {
+		t.Errorf("Operation.Command = %q, want %q", op.Command, expected)
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+}
+
+func TestGitPullMarketplace(t *testing.T) {
+	syncer, mock := newMockSyncer()
+
+	m := diff.MarketplaceDiff{
+		Alias:  "local-tools",
+		Action: diff.ActionGitUpdate,
+		Desired: &config.Marketplace{
+			Path: "/tmp/local-tools",
+		},
+	}
+
+	op, err := syncer.gitPullMarketplace(m)
+	if err != nil {
+		t.Fatalf("gitPullMarketplace() error = %v", err)
+	}
+
+	if len(mock.Commands) != 1 || mock.Commands[0] != "git pull" {
+		t.Errorf("Commands = %v, want [\"git pull\"]", mock.Commands)
+	}
+	if op.Action != "git_update" {
+		t.Errorf("Operation.Action = %q, want %q", op.Action, "git_update")
+	}
+	if !op.Success {
+		t.Errorf("Operation.Success = %v, want true", op.Success)
+	}
+}
+
+func TestExecuteGitUpdate(t *testing.T) {
+	syncer, _ := newMockSyncer()
+
+	d := &diff.Result{
+		Marketplaces: []diff.MarketplaceDiff{
+			{
+				Alias:  "local-tools",
+				Action: diff.ActionGitUpdate,
+				Desired: &config.Marketplace{
+					Path: "/tmp/local-tools",
+				},
+			},
+		},
+		Plugins: []diff.PluginDiff{},
+	}
+
+	result, err := syncer.Execute(d, Options{})
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if result.Updated != 1 {
+		t.Errorf("Updated = %d, want 1", result.Updated)
+	}
+	if result.Failed != 0 {
+		t.Errorf("Failed = %d, want 0", result.Failed)
+	}
 }
 
 func TestAddMarketplace(t *testing.T) {

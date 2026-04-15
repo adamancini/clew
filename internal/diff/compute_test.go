@@ -55,6 +55,81 @@ func TestComputeMarketplaces(t *testing.T) {
 	}
 }
 
+func TestComputeLocalGitMarketplace(t *testing.T) {
+	autoTrue := true
+
+	t.Run("new local marketplace gets ActionAdd", func(t *testing.T) {
+		clewfile := &config.Clewfile{
+			Marketplaces: map[string]config.Marketplace{
+				"local-tools": {Path: "/tmp/local-tools"},
+			},
+		}
+		current := &state.State{
+			Marketplaces: make(map[string]state.MarketplaceState),
+			Plugins:      make(map[string]state.PluginState),
+		}
+		result := Compute(clewfile, current)
+		if len(result.Marketplaces) != 1 || result.Marketplaces[0].Action != ActionAdd {
+			t.Errorf("expected ActionAdd for new local marketplace, got %+v", result.Marketplaces)
+		}
+	})
+
+	t.Run("existing local marketplace with auto_update gets ActionGitUpdate", func(t *testing.T) {
+		clewfile := &config.Clewfile{
+			Marketplaces: map[string]config.Marketplace{
+				"local-tools": {Path: "/tmp/local-tools", AutoUpdate: &autoTrue},
+			},
+		}
+		current := &state.State{
+			Marketplaces: map[string]state.MarketplaceState{
+				"local-tools": {Alias: "local-tools", Path: "/tmp/local-tools"},
+			},
+			Plugins: make(map[string]state.PluginState),
+		}
+		result := Compute(clewfile, current)
+		if len(result.Marketplaces) != 1 || result.Marketplaces[0].Action != ActionGitUpdate {
+			t.Errorf("expected ActionGitUpdate for existing local auto-update marketplace, got %+v", result.Marketplaces)
+		}
+	})
+
+	t.Run("existing local marketplace with auto_update default true gets ActionGitUpdate", func(t *testing.T) {
+		// auto_update defaults to true for local paths
+		clewfile := &config.Clewfile{
+			Marketplaces: map[string]config.Marketplace{
+				"local-tools": {Path: "/tmp/local-tools"},
+			},
+		}
+		current := &state.State{
+			Marketplaces: map[string]state.MarketplaceState{
+				"local-tools": {Alias: "local-tools", Path: "/tmp/local-tools"},
+			},
+			Plugins: make(map[string]state.PluginState),
+		}
+		result := Compute(clewfile, current)
+		if len(result.Marketplaces) != 1 || result.Marketplaces[0].Action != ActionGitUpdate {
+			t.Errorf("expected ActionGitUpdate (default auto_update=true), got %+v", result.Marketplaces)
+		}
+	})
+
+	t.Run("path changed gets ActionUpdate", func(t *testing.T) {
+		clewfile := &config.Clewfile{
+			Marketplaces: map[string]config.Marketplace{
+				"local-tools": {Path: "/tmp/new-path"},
+			},
+		}
+		current := &state.State{
+			Marketplaces: map[string]state.MarketplaceState{
+				"local-tools": {Alias: "local-tools", Path: "/tmp/old-path"},
+			},
+			Plugins: make(map[string]state.PluginState),
+		}
+		result := Compute(clewfile, current)
+		if len(result.Marketplaces) != 1 || result.Marketplaces[0].Action != ActionUpdate {
+			t.Errorf("expected ActionUpdate when path changed, got %+v", result.Marketplaces)
+		}
+	})
+}
+
 func TestComputePlugins(t *testing.T) {
 	clewfile := &config.Clewfile{
 		Plugins: []config.Plugin{

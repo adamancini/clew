@@ -113,6 +113,15 @@ func (s *Syncer) Execute(d *diff.Result, opts Options) (*Result, error) {
 			} else {
 				result.Installed++
 			}
+		case diff.ActionGitUpdate:
+			op, err := s.gitPullMarketplace(m)
+			result.Operations = append(result.Operations, op)
+			if err != nil {
+				result.Failed++
+				result.Errors = append(result.Errors, err)
+			} else {
+				result.Updated++
+			}
 		case diff.ActionRemove:
 			// Info only - don't remove
 			result.Attention = append(result.Attention, "marketplace: "+m.Alias)

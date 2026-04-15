@@ -97,6 +97,7 @@ func (r *FilesystemReader) readMarketplaces(claudeDir string, state *State) erro
 		state.Marketplaces[alias] = MarketplaceState{
 			Alias:           alias,
 			Repo:            m.Source.Repo,
+			Path:            m.Source.Path,
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}

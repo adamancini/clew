@@ -10,13 +10,14 @@ import (
 type Action string
 
 const (
-	ActionNone    Action = "none"     // Already in desired state
-	ActionAdd     Action = "add"      // Needs to be added
-	ActionRemove  Action = "remove"   // Exists but not in Clewfile (info only)
-	ActionUpdate  Action = "update"   // Needs configuration update
-	ActionEnable  Action = "enable"   // Needs to be enabled
-	ActionDisable Action = "disable"  // Needs to be disabled
-	ActionSkipGit Action = "skip_git" // Skipped due to git status issues
+	ActionNone      Action = "none"       // Already in desired state
+	ActionAdd       Action = "add"        // Needs to be added
+	ActionRemove    Action = "remove"     // Exists but not in Clewfile (info only)
+	ActionUpdate    Action = "update"     // Needs configuration update
+	ActionEnable    Action = "enable"     // Needs to be enabled
+	ActionDisable   Action = "disable"    // Needs to be disabled
+	ActionSkipGit   Action = "skip_git"   // Skipped due to git status issues
+	ActionGitUpdate Action = "git_update" // Pull latest changes for a local git marketplace
 )
 
 // MarketplaceDiff represents the diff for a marketplace.
@@ -52,7 +53,7 @@ func (r *Result) Summary() (add, update, remove, attention int) {
 		switch m.Action {
 		case ActionAdd:
 			add++
-		case ActionUpdate:
+		case ActionUpdate, ActionGitUpdate:
 			update++
 		case ActionRemove, ActionSkipGit:
 			attention++
