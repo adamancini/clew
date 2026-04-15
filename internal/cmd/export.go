@@ -33,8 +33,10 @@ type ExportedClewfile struct {
 }
 
 // ExportedMarketplace represents a marketplace for export.
+// Exactly one of Repo or Path will be set.
 type ExportedMarketplace struct {
-	Repo string `json:"repo" yaml:"repo"`
+	Repo string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	Path string `json:"path,omitempty" yaml:"path,omitempty"`
 	Ref  string `json:"ref,omitempty" yaml:"ref,omitempty"`
 }
 
@@ -98,28 +100,21 @@ func convertStateToClewfile(s *state.State, marketplacesDir string) *ExportedCle
 	}
 
 	// Convert marketplaces and track valid marketplace names.
-	// Skip local/directory-sourced marketplaces (empty Repo) since they
-	// cannot be represented in a portable Clewfile.
 	validMarketplaces := make(map[string]bool)
-	var skippedMarketplaces []string
 	for alias, m := range s.Marketplaces {
-		if m.Repo == "" {
-			skippedMarketplaces = append(skippedMarketplaces, alias)
-			continue
-		}
-		em := ExportedMarketplace{
-			Repo: m.Repo,
-		}
-		if m.Ref != "" {
+		em := ExportedMarketplace{}
+		switch {
+		case m.Path != "":
+			em.Path = m.Path // local directory / git checkout
+		case m.Repo != "":
+			em.Repo = m.Repo // remote repo (GitHub short form, HTTPS, SSH, or git URL)
 			em.Ref = m.Ref
+		default:
+			// No usable source — skip
+			continue
 		}
 		exported.Marketplaces[alias] = em
 		validMarketplaces[alias] = true
-	}
-	if len(skippedMarketplaces) > 0 {
-		sort.Strings(skippedMarketplaces)
-		fmt.Fprintf(os.Stderr, "Note: Skipped %d local marketplace(s) (no repo): %v\n",
-			len(skippedMarketplaces), skippedMarketplaces)
 	}
 
 	// Convert plugins, skipping those that reference non-existent marketplaces
@@ -136,8 +131,16 @@ func convertStateToClewfile(s *state.State, marketplacesDir string) *ExportedCle
 				continue // Skip this plugin - marketplace not in exported state
 			}
 
-			// Check if the plugin directory actually exists in the marketplace
-			pluginDir := filepath.Join(marketplacesDir, marketplace, "plugins", pluginName)
+			// Check if the plugin directory actually exists in the marketplace.
+			// For directory-sourced marketplaces the installLocation IS the root,
+			// so we look for plugins/ inside it; for remote marketplaces we use
+			// the standard marketplaces cache directory.
+			var pluginDir string
+			if ms, ok := s.Marketplaces[marketplace]; ok && ms.IsLocal() {
+				pluginDir = filepath.Join(ms.InstallLocation, "plugins", pluginName)
+			} else {
+				pluginDir = filepath.Join(marketplacesDir, marketplace, "plugins", pluginName)
+			}
 			if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
 				skippedOrphaned = append(skippedOrphaned, fullName)
 				continue // Skip this plugin - not found in marketplace directory
