@@ -120,6 +120,18 @@ func (s *Syncer) installPlugin(p diff.PluginDiff) (Operation, error) {
 		return op, fmt.Errorf("failed to install plugin %s: %w\nOutput: %s", p.Name, err, string(output))
 	}
 
+	// Plugins are installed enabled by default. If the desired state is disabled,
+	// run a follow-up disable so the install and disable are atomic from clew's perspective.
+	if p.Desired != nil && p.Desired.Enabled != nil && !*p.Desired.Enabled {
+		disableOutput, disableErr := s.runner.Run("claude", "plugin", "disable", p.Desired.Name)
+		if disableErr != nil {
+			op.Success = false
+			op.Error = fmt.Sprintf("installed plugin %s but failed to disable it: %v\nOutput: %s", p.Name, disableErr, string(disableOutput))
+			return op, fmt.Errorf("installed plugin %s but failed to disable it: %w", p.Name, disableErr)
+		}
+		op.Command += fmt.Sprintf(" && claude plugin disable %s", p.Desired.Name)
+	}
+
 	op.Success = true
 	return op, nil
 }
