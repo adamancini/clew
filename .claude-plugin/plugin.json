@@ -1,7 +1,7 @@
 {
   "name": "clew",
   "description": "Declarative Claude Code configuration manager - like Brewfile for Homebrew. Sync plugins and marketplaces across machines using a simple Clewfile.",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": {
     "name": "Ada Mancini",
     "url": "https://github.com/adamancini"

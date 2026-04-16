@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-16
+
+### Added
+- Local git checkout marketplaces: support `path:` in Clewfile alongside `repo:` for
+  remote marketplaces. Local path marketplaces default to `auto_update: true` (git pull
+  on every sync).
+- `ActionGitUpdate` diff action: emitted for existing local auto-update marketplaces so
+  git pull is visible in `--show-commands` output and subject to git-dirty skip logic.
+
+### Fixed
+- Export: state reader now prefers user-scope install entries over older project-scope
+  entries when both exist in `installed_plugins.json` (claude appends rather than
+  replaces on reinstall).
+- Export: orphan detection now adapts to marketplace directory layout — only checks for
+  a plugin directory when the marketplace has a standard `plugins/` subdirectory.
+  Non-standard layouts (superpowers-marketplace, yamlscript, replicated-plugins) and
+  single-plugin repos no longer produce false-positive orphan warnings.
+- Sync: plugins installed with `enabled: false` in the Clewfile are now disabled
+  immediately after installation, so a subsequent diff does not see a stale
+  enable/disable mismatch.
+
 ## [1.0.2] - 2026-03-26
 
 ### Changed
