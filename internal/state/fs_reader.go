@@ -150,9 +150,17 @@ func (r *FilesystemReader) readPlugins(claudeDir string, state *State) error {
 			marketplace = parts[1]
 		}
 
-		// Use the first (most recent) install for each plugin
+		// Prefer user-scope install; fall back to first entry.
+		// Claude appends new installs rather than replacing existing ones, so a plugin
+		// reinstalled at user scope may appear after an older project-scope entry.
 		if len(installs) > 0 {
 			install := installs[0]
+			for _, candidate := range installs {
+				if candidate.Scope == "user" {
+					install = candidate
+					break
+				}
+			}
 
 			// Detect if this is a local plugin:
 			// 1. If installPath is in the repos/ directory, OR
