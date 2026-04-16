@@ -432,8 +432,8 @@ func TestValidation(t *testing.T) {
 			t.Fatal("expected command to fail with missing repo")
 		}
 
-		if !strings.Contains(stderr, "repo is required") {
-			t.Errorf("expected validation error message about missing repo, got: %s", stderr)
+		if !strings.Contains(stderr, "either repo") && !strings.Contains(stderr, "repo is required") {
+			t.Errorf("expected validation error message about missing repo or path, got: %s", stderr)
 		}
 	})
 
