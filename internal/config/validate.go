@@ -10,7 +10,8 @@
 //  4. See CLAUDE.md "Schema Maintenance" section for full checklist
 //
 // Synced validation rules:
-//   - Marketplace repo: non-empty string (validateMarketplaces)
+//   - Marketplace sources: exactly one of repo or path (validateMarketplaces)
+//   - Marketplace repo/path: non-empty string (validateMarketplaces)
 //   - Plugin scopes: user only (validatePlugin)
 //   - Plugin name format: plugin@marketplace (validatePluginReferences)
 package config
@@ -74,15 +75,29 @@ func validateMarketplaces(marketplaces map[string]Marketplace) error {
 			}
 		}
 
-		// Validate repo is required and non-empty
-		if m.Repo == "" {
+		// Exactly one of repo or path must be set
+		hasRepo := m.Repo != ""
+		hasPath := m.Path != ""
+		if !hasRepo && !hasPath {
 			return ValidationError{
-				Field:   fmt.Sprintf("marketplaces.%s.repo", alias),
-				Message: "repo is required",
+				Field:   fmt.Sprintf("marketplaces.%s", alias),
+				Message: "either repo (remote) or path (local git checkout) is required",
+			}
+		}
+		if hasRepo && hasPath {
+			return ValidationError{
+				Field:   fmt.Sprintf("marketplaces.%s", alias),
+				Message: "repo and path are mutually exclusive — use repo for remote or path for local",
 			}
 		}
 
-		// Note: ref is optional, git will validate if it exists
+		// ref only makes sense for remote repos
+		if hasPath && m.Ref != "" {
+			return ValidationError{
+				Field:   fmt.Sprintf("marketplaces.%s.ref", alias),
+				Message: "ref is not supported for local path marketplaces",
+			}
+		}
 	}
 
 	return nil

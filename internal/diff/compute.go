@@ -26,11 +26,19 @@ func computeMarketplaceDiffs(desired map[string]config.Marketplace, current map[
 
 		if c, exists := current[alias]; exists {
 			currentCopy := c
-			// Check if update needed (repo or ref changed)
+			// Check if configuration update needed (source changed)
 			if marketplaceNeedsUpdate(d, c) {
 				diffs = append(diffs, MarketplaceDiff{
 					Alias:   alias,
 					Action:  ActionUpdate,
+					Current: &currentCopy,
+					Desired: &desiredCopy,
+				})
+			} else if d.IsLocal() && d.IsAutoUpdate() {
+				// Local git marketplace that is already registered — pull on every sync.
+				diffs = append(diffs, MarketplaceDiff{
+					Alias:   alias,
+					Action:  ActionGitUpdate,
 					Current: &currentCopy,
 					Desired: &desiredCopy,
 				})
@@ -68,11 +76,14 @@ func computeMarketplaceDiffs(desired map[string]config.Marketplace, current map[
 }
 
 func marketplaceNeedsUpdate(desired config.Marketplace, current state.MarketplaceState) bool {
-	// Check if repo changed
+	if desired.IsLocal() {
+		// Local marketplace: compare expanded paths
+		return desired.Source() != current.Path
+	}
+	// Remote marketplace: compare repo URL and ref
 	if desired.Repo != current.Repo {
 		return true
 	}
-	// Check if ref changed
 	if desired.Ref != current.Ref {
 		return true
 	}

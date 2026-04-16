@@ -501,6 +501,10 @@ func (r *testCommandRunner) Run(name string, args ...string) ([]byte, error) {
 	return r.runFunc(name, args...)
 }
 
+func (r *testCommandRunner) RunInDir(dir, name string, args ...string) ([]byte, error) {
+	return r.runFunc(name, args...)
+}
+
 // TestIntegration_BackupCreation tests backup functionality.
 func TestIntegration_BackupCreation(t *testing.T) {
 	ts := newTestSetup(t)

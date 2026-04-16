@@ -240,14 +240,16 @@ func TestConvertStateToClewfile_MixedPlugins(t *testing.T) {
 }
 
 func TestConvertStateToClewfile_LocalMarketplaceSkipStillWorks(t *testing.T) {
-	// Ensure the existing local marketplace skip logic still works
+	// A marketplace with neither Repo nor Path is unusable — it should be
+	// silently excluded from export.  Its plugins are skipped too (they reference
+	// a marketplace that did not make it into the exported map).
 	marketplacesDir := setupMarketplaceDir(t, map[string][]string{})
 
 	s := &state.State{
 		Marketplaces: map[string]state.MarketplaceState{
-			"local-marketplace": {
-				Alias: "local-marketplace",
-				Repo:  "", // Local marketplace has no repo
+			"unusable": {
+				Alias: "unusable",
+				// Both Repo and Path are empty — nothing to add.
 			},
 			"remote-marketplace": {
 				Alias: "remote-marketplace",
@@ -255,9 +257,9 @@ func TestConvertStateToClewfile_LocalMarketplaceSkipStillWorks(t *testing.T) {
 			},
 		},
 		Plugins: map[string]state.PluginState{
-			"local-plugin@local-marketplace": {
+			"local-plugin@unusable": {
 				Name:        "local-plugin",
-				Marketplace: "local-marketplace",
+				Marketplace: "unusable",
 				Scope:       "user",
 				Enabled:     true,
 			},
@@ -267,9 +269,9 @@ func TestConvertStateToClewfile_LocalMarketplaceSkipStillWorks(t *testing.T) {
 	stderr := captureStderr(t, func() {
 		exported := convertStateToClewfile(s, marketplacesDir)
 
-		// Local marketplace should not be exported
-		if _, ok := exported.Marketplaces["local-marketplace"]; ok {
-			t.Error("local marketplace should not be exported")
+		// Unusable marketplace should not be exported
+		if _, ok := exported.Marketplaces["unusable"]; ok {
+			t.Error("unusable marketplace should not be exported")
 		}
 
 		// Remote marketplace should be exported
@@ -277,20 +279,56 @@ func TestConvertStateToClewfile_LocalMarketplaceSkipStillWorks(t *testing.T) {
 			t.Error("remote marketplace should be exported")
 		}
 
-		// Plugin referencing local marketplace should be skipped
+		// Plugin referencing the unusable marketplace should be skipped
 		if len(exported.Plugins) != 0 {
-			t.Fatalf("expected 0 plugins (local plugin should be skipped), got %d", len(exported.Plugins))
+			t.Fatalf("expected 0 plugins, got %d", len(exported.Plugins))
 		}
 	})
 
-	// Should see local marketplace skip message
-	if !strings.Contains(stderr, "local marketplace") {
-		t.Errorf("expected local marketplace warning in stderr, got: %s", stderr)
-	}
-	// Should see non-marketplace plugin skip message
+	// Plugin is skipped because its marketplace wasn't exported
 	if !strings.Contains(stderr, "referencing non-marketplace sources") {
 		t.Errorf("expected non-marketplace sources warning in stderr, got: %s", stderr)
 	}
+}
+
+func TestConvertStateToClewfile_DirectoryMarketplaceExported(t *testing.T) {
+	// A marketplace with a local path should be exported with path: instead of repo:
+	marketplacesDir := setupMarketplaceDir(t, map[string][]string{
+		"local-mkt": {"my-plugin"},
+	})
+
+	s := &state.State{
+		Marketplaces: map[string]state.MarketplaceState{
+			"local-mkt": {
+				Alias:           "local-mkt",
+				Path:            "/tmp/local-mkt",
+				InstallLocation: filepath.Join(marketplacesDir, "local-mkt"),
+			},
+		},
+		Plugins: map[string]state.PluginState{
+			"my-plugin@local-mkt": {
+				Name:        "my-plugin",
+				Marketplace: "local-mkt",
+				Scope:       "user",
+				Enabled:     true,
+			},
+		},
+	}
+
+	captureStderr(t, func() {
+		exported := convertStateToClewfile(s, marketplacesDir)
+
+		em, ok := exported.Marketplaces["local-mkt"]
+		if !ok {
+			t.Fatal("local-mkt marketplace should be exported")
+		}
+		if em.Path != "/tmp/local-mkt" {
+			t.Errorf("Path = %q, want /tmp/local-mkt", em.Path)
+		}
+		if em.Repo != "" {
+			t.Errorf("Repo should be empty for directory marketplace, got %q", em.Repo)
+		}
+	})
 }
 
 func TestConvertStateToClewfile_PluginWithoutMarketplace(t *testing.T) {

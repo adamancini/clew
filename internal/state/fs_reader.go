@@ -10,11 +10,17 @@ import (
 )
 
 // fsMarketplaceEntry represents a single marketplace in known_marketplaces.json.
+// The claude CLI uses several source types:
+//   - "github"    — GitHub short form (owner/repo) or HTTPS URL; Repo field holds the value
+//   - "directory" — Local filesystem path; Path field holds the value
+//   - "git"       — Arbitrary git remote URL; URL field holds the value
+//   - "local"     — Legacy alias for "directory"
 type fsMarketplaceEntry struct {
 	Source struct {
-		Source string `json:"source"` // "github" or "local"
+		Source string `json:"source"` // "github", "directory", "git", or "local"
 		Repo   string `json:"repo,omitempty"`
 		Path   string `json:"path,omitempty"`
+		URL    string `json:"url,omitempty"` // used by "git" source type
 	} `json:"source"`
 	InstallLocation string `json:"installLocation"`
 	LastUpdated     string `json:"lastUpdated"`
@@ -94,12 +100,25 @@ func (r *FilesystemReader) readMarketplaces(claudeDir string, state *State) erro
 	}
 
 	for alias, m := range marketplaces {
-		state.Marketplaces[alias] = MarketplaceState{
+		ms := MarketplaceState{
 			Alias:           alias,
-			Repo:            m.Source.Repo,
 			InstallLocation: m.InstallLocation,
 			LastUpdated:     m.LastUpdated,
 		}
+		switch m.Source.Source {
+		case "github":
+			ms.Repo = m.Source.Repo
+		case "directory", "local":
+			ms.Path = m.Source.Path
+		case "git":
+			// Treat git URL sources as a remote repo (URL is valid as repo value)
+			ms.Repo = m.Source.URL
+		default:
+			// Unknown source type: preserve whatever is available
+			ms.Repo = m.Source.Repo
+			ms.Path = m.Source.Path
+		}
+		state.Marketplaces[alias] = ms
 	}
 
 	return nil
@@ -131,9 +150,17 @@ func (r *FilesystemReader) readPlugins(claudeDir string, state *State) error {
 			marketplace = parts[1]
 		}
 
-		// Use the first (most recent) install for each plugin
+		// Prefer user-scope install; fall back to first entry.
+		// Claude appends new installs rather than replacing existing ones, so a plugin
+		// reinstalled at user scope may appear after an older project-scope entry.
 		if len(installs) > 0 {
 			install := installs[0]
+			for _, candidate := range installs {
+				if candidate.Scope == "user" {
+					install = candidate
+					break
+				}
+			}
 
 			// Detect if this is a local plugin:
 			// 1. If installPath is in the repos/ directory, OR

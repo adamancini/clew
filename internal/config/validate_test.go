@@ -41,12 +41,35 @@ func TestValidateMarketplaces(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "missing repo",
+			name: "missing repo and path",
 			marketplaces: map[string]Marketplace{
 				"bad": {},
 			},
 			wantErr:     true,
-			errContains: "repo is required",
+			errContains: "either repo (remote) or path (local git checkout) is required",
+		},
+		{
+			name: "repo and path both set",
+			marketplaces: map[string]Marketplace{
+				"bad": {Repo: "org/repo", Path: "~/plugins/repo"},
+			},
+			wantErr:     true,
+			errContains: "mutually exclusive",
+		},
+		{
+			name: "valid local path marketplace",
+			marketplaces: map[string]Marketplace{
+				"local": {Path: "~/plugins/my-tools"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "ref not allowed for local path",
+			marketplaces: map[string]Marketplace{
+				"bad": {Path: "~/plugins/my-tools", Ref: "main"},
+			},
+			wantErr:     true,
+			errContains: "ref is not supported for local path",
 		},
 		{
 			name:         "empty marketplaces map is valid",

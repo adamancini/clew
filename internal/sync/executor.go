@@ -13,6 +13,7 @@ import (
 // This allows for mocking in tests.
 type CommandRunner interface {
 	Run(name string, args ...string) ([]byte, error)
+	RunInDir(dir, name string, args ...string) ([]byte, error)
 }
 
 // DefaultCommandRunner uses os/exec to run commands.
@@ -23,7 +24,14 @@ func (r *DefaultCommandRunner) Run(name string, args ...string) ([]byte, error) 
 	return cmd.CombinedOutput()
 }
 
-// addMarketplace executes `claude plugin marketplace add <repo>`.
+func (r *DefaultCommandRunner) RunInDir(dir, name string, args ...string) ([]byte, error) {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	return cmd.CombinedOutput()
+}
+
+// addMarketplace executes `claude plugin marketplace add <source>`.
+// Source is the repo URL for remote marketplaces or the local path for git checkouts.
 func (s *Syncer) addMarketplace(m diff.MarketplaceDiff) (Operation, error) {
 	op := Operation{
 		Type:   "marketplace",
@@ -37,16 +45,45 @@ func (s *Syncer) addMarketplace(m diff.MarketplaceDiff) (Operation, error) {
 		return op, fmt.Errorf("no desired state for marketplace %s", m.Alias)
 	}
 
-	op.Description = fmt.Sprintf("Add marketplace: %s (%s)", m.Alias, m.Desired.Repo)
+	source := m.Desired.Source()
+	op.Description = fmt.Sprintf("Add marketplace: %s (%s)", m.Alias, source)
+	op.Command = fmt.Sprintf("claude plugin marketplace add %s", source)
 
-	// Build command string before executing
-	op.Command = fmt.Sprintf("claude plugin marketplace add %s", m.Desired.Repo)
-
-	output, err := s.runner.Run("claude", "plugin", "marketplace", "add", m.Desired.Repo)
+	output, err := s.runner.Run("claude", "plugin", "marketplace", "add", source)
 	if err != nil {
 		op.Success = false
 		op.Error = fmt.Sprintf("failed to add marketplace %s: %v\nOutput: %s", m.Alias, err, string(output))
 		return op, fmt.Errorf("failed to add marketplace %s: %w\nOutput: %s", m.Alias, err, string(output))
+	}
+
+	op.Success = true
+	return op, nil
+}
+
+// gitPullMarketplace runs `git pull` inside the local marketplace checkout.
+// It is used for ActionGitUpdate — local marketplaces with auto_update: true.
+func (s *Syncer) gitPullMarketplace(m diff.MarketplaceDiff) (Operation, error) {
+	op := Operation{
+		Type:   "marketplace",
+		Name:   m.Alias,
+		Action: "git_update",
+	}
+
+	if m.Desired == nil {
+		op.Success = false
+		op.Error = fmt.Sprintf("no desired state for marketplace %s", m.Alias)
+		return op, fmt.Errorf("no desired state for marketplace %s", m.Alias)
+	}
+
+	path := m.Desired.Source()
+	op.Description = fmt.Sprintf("Pull latest changes for local marketplace: %s (%s)", m.Alias, path)
+	op.Command = fmt.Sprintf("git -C %s pull", path)
+
+	output, err := s.runner.RunInDir(path, "git", "pull")
+	if err != nil {
+		op.Success = false
+		op.Error = fmt.Sprintf("git pull failed for marketplace %s (%s): %v\nOutput: %s", m.Alias, path, err, string(output))
+		return op, fmt.Errorf("git pull failed for marketplace %s: %w\nOutput: %s", m.Alias, err, string(output))
 	}
 
 	op.Success = true
@@ -81,6 +118,18 @@ func (s *Syncer) installPlugin(p diff.PluginDiff) (Operation, error) {
 		op.Success = false
 		op.Error = fmt.Sprintf("failed to install plugin %s: %v\nOutput: %s", p.Name, err, string(output))
 		return op, fmt.Errorf("failed to install plugin %s: %w\nOutput: %s", p.Name, err, string(output))
+	}
+
+	// Plugins are installed enabled by default. If the desired state is disabled,
+	// run a follow-up disable so the install and disable are atomic from clew's perspective.
+	if p.Desired != nil && p.Desired.Enabled != nil && !*p.Desired.Enabled {
+		disableOutput, disableErr := s.runner.Run("claude", "plugin", "disable", p.Desired.Name)
+		if disableErr != nil {
+			op.Success = false
+			op.Error = fmt.Sprintf("installed plugin %s but failed to disable it: %v\nOutput: %s", p.Name, disableErr, string(disableOutput))
+			return op, fmt.Errorf("installed plugin %s but failed to disable it: %w", p.Name, disableErr)
+		}
+		op.Command += fmt.Sprintf(" && claude plugin disable %s", p.Desired.Name)
 	}
 
 	op.Success = true

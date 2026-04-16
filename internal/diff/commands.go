@@ -16,14 +16,30 @@ type Command struct {
 func (r *Result) GenerateCommands() []Command {
 	var commands []Command
 
-	// 1. Add marketplaces first (plugins depend on them)
+	// 1. Add / update marketplaces first (plugins depend on them)
 	for _, m := range r.Marketplaces {
-		if m.Action == ActionAdd && m.Desired != nil {
-			cmd := fmt.Sprintf("claude plugin marketplace add %s", m.Desired.Repo)
-			commands = append(commands, Command{
-				Command:     cmd,
-				Description: fmt.Sprintf("Add marketplace: %s", m.Alias),
-			})
+		switch m.Action {
+		case ActionAdd:
+			if m.Desired != nil {
+				// For local paths, git pull before registering (in case it already exists on disk)
+				if m.Desired.IsLocal() {
+					commands = append(commands, Command{
+						Command:     fmt.Sprintf("git -C %s pull", m.Desired.Source()),
+						Description: fmt.Sprintf("Pull latest changes for local marketplace: %s", m.Alias),
+					})
+				}
+				commands = append(commands, Command{
+					Command:     fmt.Sprintf("claude plugin marketplace add %s", m.Desired.Source()),
+					Description: fmt.Sprintf("Add marketplace: %s", m.Alias),
+				})
+			}
+		case ActionGitUpdate:
+			if m.Desired != nil {
+				commands = append(commands, Command{
+					Command:     fmt.Sprintf("git -C %s pull", m.Desired.Source()),
+					Description: fmt.Sprintf("Pull latest changes for local marketplace: %s", m.Alias),
+				})
+			}
 		}
 	}
 
